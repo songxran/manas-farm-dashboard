@@ -532,6 +532,13 @@
   }
   .auth-overlay.active { display: flex; }
 
+  /* While logged out, the dashboard behind the overlay must not occupy layout
+     space — otherwise the page becomes scrollable into empty area even though
+     everything visible is just the login card. */
+  body.logged-out .sidebar,
+  body.logged-out .overlay,
+  body.logged-out .main { display: none; }
+
   .auth-card {
     background: #fff;
     border-radius: 20px;
@@ -585,7 +592,7 @@
   }
 </style>
 </head>
-<body>
+<body class="logged-out">
 
   <!-- Login gate -->
   <div class="auth-overlay active" id="authOverlay">
@@ -1660,10 +1667,12 @@
 
   function showLogin() {
     authOverlay.classList.add('active');
+    document.body.classList.add('logged-out');
   }
 
   async function initAppAfterLogin(session) {
     authOverlay.classList.remove('active');
+    document.body.classList.remove('logged-out');
     document.getElementById('userEmailLabel').textContent = session.user.email;
 
     await Promise.all([loadPonds(), loadCostItems(), loadFarmSettings()]);
