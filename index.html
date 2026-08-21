@@ -5,6 +5,9 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>มนัสฟาร์ม | โปรไฟล์ฟาร์มกุ้ง</title>
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Mitr:wght@400;500;600;700&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
   @font-face {
@@ -56,8 +59,8 @@
   html, body { height: 100%; }
 
   body {
-    font-family: "FC Mittraphap Rounded", "DB Adman X", "DB Heavent", "Sarabun", "Segoe UI", sans-serif;
-    font-weight: bold;
+    font-family: "Mitr", "FC Mittraphap Rounded", "DB Adman X", "DB Heavent", "Sarabun", "Segoe UI", sans-serif;
+    font-weight: 700;
     color: var(--text);
     background:
       radial-gradient(circle at 15% 10%, rgba(33,150,243,0.35), transparent 45%),
@@ -323,6 +326,12 @@
     border-radius: 16px;
     border: 1px solid var(--line);
     box-shadow: 0 10px 30px rgba(10, 60, 120, 0.14);
+    /* Leaflet's internal panes/controls use z-index values up to ~1000 —
+       without this, they escape past the sidebar (z-index 200) when it's
+       open on mobile. Boxing the map in its own stacking context caps
+       everything inside it at z-index 1, well below the sidebar/overlay. */
+    position: relative;
+    z-index: 1;
   }
 
   /* ---------- Buttons ---------- */
