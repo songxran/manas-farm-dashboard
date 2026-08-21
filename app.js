@@ -119,7 +119,13 @@
   }
 
   /* ---------------- Farm map (Leaflet) ---------------- */
+  // Must only run once the page is actually visible (after login) — the
+  // dashboard is display:none behind the login screen, and Leaflet computes
+  // a broken view if it initializes inside a zero-size container. Guarded so
+  // repeat calls (e.g. logging out and back in) don't re-init the same div.
+  let mapInitialized = false;
   function initFarmMap() {
+    if (mapInitialized) return;
     const mapEl = document.getElementById('farmMap');
     if (!mapEl || typeof L === 'undefined') return;
 
@@ -127,6 +133,7 @@
     const farmLatLng = [8.0862, 98.9019];
 
     const map = L.map('farmMap').setView(farmLatLng, 14);
+    mapInitialized = true;
 
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
       maxZoom: 19,
@@ -140,19 +147,23 @@
     map.on('click', function (e) {
       marker.setLatLng(e.latlng);
     });
+
+    // Container had display:none up until just now, so Leaflet needs a nudge
+    // to recompute its size correctly.
+    setTimeout(() => map.invalidateSize(), 0);
   }
 
-  // Exposed so index.html's auth flow can populate/render this page once the
-  // user is logged in and PONDS has been loaded from Supabase.
+  // Exposed so index.html's auth flow can populate/render this page — and now
+  // initialize the map — once the user is logged in and the dashboard (and
+  // therefore #farmMap) is actually visible.
   window.populatePondSelect = populatePondSelect;
   window.renderDailyLog = renderDailyLog;
+  window.initFarmMap = initFarmMap;
 
   document.addEventListener('DOMContentLoaded', function () {
     document.getElementById('dlDate').value = todayStr();
 
     const saveBtn = document.getElementById('dailyLogSaveBtn');
     if (saveBtn) saveBtn.addEventListener('click', handleSave);
-
-    initFarmMap();
   });
 })();

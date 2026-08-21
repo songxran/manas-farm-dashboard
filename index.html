@@ -25,6 +25,15 @@
     src: local("DB Adman X Bold"), local("DB AdmanX Bd"), local("DB Adman X Bd");
     font-weight: bold;
   }
+  @font-face {
+    font-family: "FC Mittraphap Rounded";
+    src: local("FC Mittraphap Rounded"), local("FC Mittraphap Rounded Regular");
+  }
+  @font-face {
+    font-family: "FC Mittraphap Rounded";
+    src: local("FC Mittraphap Rounded Bold"), local("FC Mittraphap Rounded Bd"), local("FC Mittraphap Rounded ExtraBold");
+    font-weight: bold;
+  }
 
   :root {
     --blue-1: #021a3f;
@@ -47,7 +56,8 @@
   html, body { height: 100%; }
 
   body {
-    font-family: "DB Adman X", "DB Heavent", "Sarabun", "Segoe UI", sans-serif;
+    font-family: "FC Mittraphap Rounded", "DB Adman X", "DB Heavent", "Sarabun", "Segoe UI", sans-serif;
+    font-weight: bold;
     color: var(--text);
     background:
       radial-gradient(circle at 15% 10%, rgba(33,150,243,0.35), transparent 45%),
@@ -58,7 +68,7 @@
   }
 
   h1, h2, h3 { font-weight: bold; text-align: left; }
-  p, span, li { text-align: center; font-weight: normal; }
+  p, span, li { text-align: center; }
 
   /* ---------- Sidebar ---------- */
   .sidebar {
@@ -622,11 +632,11 @@
     </div>
     <ul class="nav">
       <li><a href="#" class="active" data-page="overview"><span class="icon">🏠</span> ภาพรวม</a></li>
+      <li><a href="#" data-page="dailylog"><span class="icon">📝</span> บันทึกรายวัน</a></li>
       <li><a href="#" data-page="ponds"><span class="icon">🌊</span> บ่อเลี้ยง</a></li>
       <li><a href="#" data-page="production"><span class="icon">🦐</span> ผลผลิต</a></li>
       <li><a href="#" data-page="cost"><span class="icon">💰</span> คำนวณต้นทุน</a></li>
       <li><a href="#" data-page="report"><span class="icon">📊</span> รายงาน</a></li>
-      <li><a href="#" data-page="dailylog"><span class="icon">📝</span> บันทึกรายวัน</a></li>
       <li><a href="#" data-page="settings"><span class="icon">⚙️</span> ตั้งค่า</a></li>
     </ul>
     <div class="sidebar-footer">© 2026 มนัสฟาร์ม</div>
@@ -1682,6 +1692,7 @@
     // app.js exposes these once it's loaded — populate the daily-log page too.
     if (typeof window.populatePondSelect === 'function') window.populatePondSelect();
     if (typeof window.renderDailyLog === 'function') window.renderDailyLog();
+    if (typeof window.initFarmMap === 'function') window.initFarmMap();
   }
 
   loginForm.addEventListener('submit', async (e) => {
