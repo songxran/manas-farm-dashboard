@@ -1,0 +1,1711 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>มนัสฟาร์ม | โปรไฟล์ฟาร์มกุ้ง</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+  @font-face {
+    font-family: "DB Heavent";
+    src: local("DB Heavent"), local("DB Heavent Regular");
+  }
+  @font-face {
+    font-family: "DB Heavent";
+    src: local("DB Heavent Bold"), local("DB HeventBd");
+    font-weight: bold;
+  }
+  @font-face {
+    font-family: "DB Adman X";
+    src: local("DB Adman X"), local("DB AdmanX"), local("DB Adman X Med"), local("DB Adman X Medium");
+  }
+  @font-face {
+    font-family: "DB Adman X";
+    src: local("DB Adman X Bold"), local("DB AdmanX Bd"), local("DB Adman X Bd");
+    font-weight: bold;
+  }
+
+  :root {
+    --blue-1: #021a3f;
+    --blue-2: #04336b;
+    --blue-3: #0a5bb0;
+    --blue-4: #2196f3;
+    --blue-light: #bfe1ff;
+    --gold: #ffd166;
+    --card-bg: rgba(255, 255, 255, 0.08);
+    --text: #eaf3ff;
+    --sidebar-width: 250px;
+    --ink: #16305c;
+    --muted: #7c93b8;
+    --line: #eef2f8;
+    --danger: #d0342c;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  html, body { height: 100%; }
+
+  body {
+    font-family: "DB Adman X", "DB Heavent", "Sarabun", "Segoe UI", sans-serif;
+    color: var(--text);
+    background:
+      radial-gradient(circle at 15% 10%, rgba(33,150,243,0.35), transparent 45%),
+      radial-gradient(circle at 85% 90%, rgba(10,91,176,0.4), transparent 50%),
+      linear-gradient(160deg, var(--blue-1) 0%, var(--blue-2) 45%, var(--blue-3) 100%);
+    min-height: 100vh;
+    display: flex;
+  }
+
+  h1, h2, h3 { font-weight: bold; text-align: left; }
+  p, span, li { text-align: center; font-weight: normal; }
+
+  /* ---------- Sidebar ---------- */
+  .sidebar {
+    width: var(--sidebar-width);
+    flex-shrink: 0;
+    height: 100vh;
+    position: sticky;
+    top: 0;
+    background: linear-gradient(200deg, #01102b, #062a5c);
+    border-right: 1px solid rgba(255,255,255,0.08);
+    display: flex;
+    flex-direction: column;
+    transition: transform 0.25s ease;
+    z-index: 200;
+  }
+
+  .sidebar-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 22px 20px;
+    border-bottom: 1px solid rgba(255,255,255,0.08);
+  }
+
+  .sidebar-header .logo-mini {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    overflow: hidden;
+    border: 2px solid var(--gold);
+    flex-shrink: 0;
+  }
+
+  .sidebar-header .logo-mini img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+
+  .sidebar-header .title {
+    font-size: 20px;
+    font-weight: bold;
+    color: #fff;
+    text-align: left;
+  }
+
+  .nav {
+    list-style: none;
+    padding: 14px 12px;
+    flex: 1;
+    overflow-y: auto;
+  }
+
+  .nav li { margin-bottom: 6px; }
+
+  .nav a {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 11px 14px;
+    border-radius: 10px;
+    color: var(--blue-light);
+    text-decoration: none;
+    font-size: 14px;
+    transition: background 0.15s, color 0.15s;
+    cursor: pointer;
+  }
+
+  .nav a:hover { background: rgba(255,255,255,0.08); color: #fff; }
+
+  .nav a.active {
+    background: linear-gradient(90deg, var(--blue-4), #1565c0);
+    color: #fff;
+    box-shadow: 0 4px 14px rgba(33,150,243,0.4);
+  }
+
+  .nav .icon { width: 20px; text-align: center; font-size: 1.1rem; }
+
+  .sidebar-footer {
+    padding: 16px 20px;
+    border-top: 1px solid rgba(255,255,255,0.08);
+    font-size: 13px;
+    color: rgba(234,243,255,0.55);
+    text-align: left;
+  }
+
+  /* ---------- Overlay (mobile) ---------- */
+  .overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.5);
+    z-index: 150;
+  }
+
+  /* ---------- Main ---------- */
+  .main {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .topbar {
+    height: 66px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 24px;
+    position: sticky;
+    top: 0;
+    background: rgba(2, 26, 63, 0.55);
+    backdrop-filter: blur(10px);
+    border-bottom: 1px solid rgba(255,255,255,0.08);
+    z-index: 100;
+  }
+
+  .topbar-left { display: flex; align-items: center; gap: 14px; }
+  .topbar-right { display: flex; align-items: center; gap: 12px; }
+  .user-email { font-size: 13px; color: var(--blue-light); }
+
+  .menu-toggle {
+    display: none;
+    background: none;
+    border: none;
+    font-size: 1.5rem;
+    cursor: pointer;
+    color: #fff;
+    padding: 4px 8px;
+    border-radius: 8px;
+  }
+
+  .menu-toggle:hover { background: rgba(255,255,255,0.08); }
+
+  .page-title { font-size: 20px; font-weight: bold; color: #fff; }
+
+  .content { padding: 40px 24px 60px; flex: 1; background: #ffffff; color: var(--ink); }
+
+  .page-wrap { width: 100%; max-width: 1120px; margin: 0 auto; }
+
+  .page { display: none; }
+  .page.active { display: block; }
+
+  .section-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 12px;
+    margin-bottom: 22px;
+  }
+
+  .section-head h2 { font-size: 28px; color: var(--ink); text-align: left; }
+  .section-sub { color: var(--muted); font-size: 13px; text-align: left; margin-top: 4px; }
+
+  /* ---------- Hero (ภาพรวม) ---------- */
+  .hero { text-align: center; margin-bottom: 40px; }
+
+  .logo-wrap {
+    width: 150px;
+    height: 150px;
+    margin: 0 auto 22px;
+    border-radius: 50%;
+    padding: 6px;
+    background: linear-gradient(135deg, var(--blue-4), var(--gold));
+    box-shadow: 0 12px 40px rgba(0, 30, 80, 0.5);
+  }
+
+  .logo-wrap img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    border-radius: 50%;
+    border: 4px solid rgba(255,255,255,0.9);
+    display: block;
+  }
+
+  .farm-name {
+    font-size: 34px;
+    letter-spacing: 1px;
+    text-align: center;
+    background: linear-gradient(90deg, var(--blue-2), var(--blue-4) 60%, #1565c0);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+    line-height: 1.2;
+  }
+
+  .owner-name {
+    text-align: center;
+    font-size: 16px;
+    color: #4a6c9b;
+    margin-top: 6px;
+    font-weight: normal;
+  }
+
+  .owner-name span { color: var(--blue-3); font-weight: bold; }
+
+  .info-grid { display: grid; grid-template-columns: 1fr; gap: 18px; max-width: 780px; margin: 0 auto; }
+
+  .info-card {
+    background: #ffffff;
+    border: 1px solid var(--line);
+    border-radius: 18px;
+    padding: 24px 26px;
+    box-shadow: 0 10px 30px rgba(10, 60, 120, 0.14);
+    display: flex;
+    align-items: flex-start;
+    gap: 18px;
+  }
+
+  .info-card .icon {
+    flex-shrink: 0;
+    width: 54px;
+    height: 54px;
+    border-radius: 14px;
+    background: linear-gradient(135deg, var(--blue-4), #1565c0);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.6rem;
+  }
+
+  .info-card .body { flex: 1; text-align: left; }
+  .info-card .label { font-size: 13px; color: var(--muted); margin-bottom: 4px; }
+  .info-card .value { font-size: 16px; line-height: 1.5; color: var(--ink); }
+
+  .stat-row { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; }
+
+  .stat-card {
+    background: #ffffff;
+    border: 1px solid var(--line);
+    border-radius: 18px;
+    padding: 24px 20px;
+    text-align: center;
+    box-shadow: 0 10px 30px rgba(10, 60, 120, 0.14);
+  }
+
+  .stat-card .icon { font-size: 2rem; margin-bottom: 8px; }
+  .stat-card .value { font-size: 2.4rem; font-weight: bold; color: var(--ink); }
+  .stat-card .label { font-size: 13px; color: var(--muted); margin-top: 4px; }
+
+  footer.page-footer { text-align: center; margin-top: 44px; color: #9aacc9; font-size: 13px; }
+
+  /* ---------- Map (ภาพรวม) ---------- */
+  .map-panel { max-width: 780px; margin: 24px auto 0; }
+  .map-panel h3 { font-size: 22px; color: var(--ink); margin-bottom: 4px; text-align: left; }
+  .map-hint { color: var(--muted); font-size: 13px; text-align: left; margin-bottom: 12px; }
+  #farmMap {
+    width: 100%;
+    height: 320px;
+    border-radius: 16px;
+    border: 1px solid var(--line);
+    box-shadow: 0 10px 30px rgba(10, 60, 120, 0.14);
+  }
+
+  /* ---------- Buttons ---------- */
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    border: none;
+    border-radius: 10px;
+    padding: 10px 18px;
+    font-family: inherit;
+    font-size: 14px;
+    cursor: pointer;
+    transition: transform 0.1s, box-shadow 0.15s;
+  }
+  .btn:active { transform: translateY(1px); }
+
+  .btn-primary {
+    background: linear-gradient(90deg, var(--blue-4), #1565c0);
+    color: #fff;
+    box-shadow: 0 6px 18px rgba(33,150,243,0.35);
+  }
+  .btn-primary:hover { box-shadow: 0 8px 22px rgba(33,150,243,0.5); }
+
+  .btn-outline {
+    background: #fff;
+    color: var(--blue-3);
+    border: 1.5px solid var(--blue-3);
+  }
+  .btn-outline:hover { background: #eaf4ff; }
+
+  .btn-danger {
+    background: #fff;
+    color: var(--danger);
+    border: 1.5px solid var(--danger);
+  }
+  .btn-danger:hover { background: #fdecea; }
+
+  .btn-sm { padding: 6px 12px; font-size: 13px; border-radius: 8px; }
+
+  .btn-row { display: flex; gap: 10px; flex-wrap: wrap; }
+  .row-actions { display: flex; gap: 6px; flex-wrap: nowrap; }
+
+  /* ---------- Cards / panels ---------- */
+  .panel {
+    background: #fff;
+    border: 1px solid var(--line);
+    border-radius: 18px;
+    padding: 22px;
+    box-shadow: 0 10px 30px rgba(10, 60, 120, 0.1);
+    margin-bottom: 22px;
+  }
+
+  .panel h3 { font-size: 22px; color: var(--ink); margin-bottom: 14px; text-align: left; }
+
+  /* ---------- Table ---------- */
+  .table-wrap { overflow-x: auto; border-radius: 14px; }
+
+  table { width: 100%; border-collapse: collapse; min-width: 640px; }
+
+  th, td {
+    padding: 12px 14px;
+    text-align: left;
+    border-bottom: 1px solid var(--line);
+    font-size: 16px;
+    white-space: nowrap;
+  }
+
+  th {
+    color: var(--muted);
+    font-weight: normal;
+    font-size: 14px;
+    text-transform: uppercase;
+    letter-spacing: 0.4px;
+    background: #f7faff;
+  }
+
+  tbody tr:hover { background: #f7faff; }
+
+  td.num, th.num { text-align: right; }
+
+  .empty-row td { color: var(--muted); text-align: center; padding: 24px; }
+
+  /* status badges */
+  .badge {
+    display: inline-block;
+    padding: 4px 12px;
+    border-radius: 999px;
+    font-size: 13px;
+    font-weight: bold;
+  }
+  .badge-empty { background: #eef1f6; color: #6b7280; }
+  .badge-growing { background: #e3f2fd; color: #1565c0; }
+  .badge-prep { background: #fff3e0; color: #ef6c00; }
+  .badge-harvested { background: #ede7f6; color: #6a3fb5; }
+
+  /* ---------- Bar chart ---------- */
+  .bar-chart {
+    display: flex;
+    align-items: flex-end;
+    gap: 14px;
+    height: 220px;
+    padding-top: 20px;
+    overflow-x: auto;
+  }
+
+  .bar-col {
+    flex: 1;
+    min-width: 42px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: flex-end;
+    height: 100%;
+  }
+
+  .bar-val { font-size: 12px; color: var(--ink); margin-bottom: 4px; white-space: nowrap; }
+
+  .bar {
+    width: 60%;
+    min-width: 22px;
+    border-radius: 6px 6px 0 0;
+    background: linear-gradient(180deg, var(--blue-4), var(--blue-2));
+    transition: height 0.4s ease;
+  }
+
+  .bar-col .bar-label { margin-top: 8px; font-size: 12px; color: var(--muted); text-align: center; }
+
+  /* ---------- Cost breakdown bars ---------- */
+  .cost-cat-row { margin-bottom: 14px; }
+  .cost-cat-row .cost-cat-top {
+    display: flex;
+    justify-content: space-between;
+    font-size: 14px;
+    margin-bottom: 6px;
+    text-align: left;
+  }
+  .cost-cat-top .name { color: var(--ink); }
+  .cost-cat-top .amount { color: var(--muted); }
+
+  .cost-track { height: 10px; border-radius: 6px; background: #eef2f8; overflow: hidden; }
+  .cost-fill { height: 100%; border-radius: 6px; background: linear-gradient(90deg, var(--blue-4), var(--gold)); }
+
+  /* ---------- Summary cards row ---------- */
+  .summary-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 22px; }
+  .summary-card {
+    background: #fff;
+    border: 1px solid var(--line);
+    border-radius: 16px;
+    padding: 18px;
+    box-shadow: 0 8px 24px rgba(10,60,120,0.1);
+    text-align: left;
+  }
+  .summary-card .label { font-size: 13px; color: var(--muted); margin-bottom: 6px; text-align: left; }
+  .summary-card .value { font-size: 1.5rem; font-weight: bold; color: var(--ink); text-align: left; }
+  .summary-card .value.pos { color: #1b8a3d; }
+  .summary-card .value.neg { color: #d0342c; }
+
+  /* ---------- Modal ---------- */
+  .modal-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(2, 20, 45, 0.55);
+    z-index: 400;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+  }
+  .modal-overlay.active { display: flex; }
+
+  .modal-box {
+    background: #fff;
+    border-radius: 18px;
+    padding: 26px;
+    width: 100%;
+    max-width: 480px;
+    max-height: 88vh;
+    overflow-y: auto;
+    box-shadow: 0 24px 60px rgba(0,0,0,0.3);
+  }
+
+  .modal-box h3 { color: var(--ink); font-size: 22px; margin-bottom: 18px; text-align: left; }
+
+  .field { margin-bottom: 14px; text-align: left; }
+  .field label { display: block; font-size: 14px; color: var(--muted); margin-bottom: 6px; text-align: left; }
+  .field input, .field select {
+    width: 100%;
+    padding: 10px 12px;
+    border: 1.5px solid var(--line);
+    border-radius: 10px;
+    font-family: inherit;
+    font-size: 16px;
+    color: var(--ink);
+  }
+  .field input:focus, .field select:focus { outline: none; border-color: var(--blue-4); }
+
+  .field-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0 14px; }
+
+  .detail-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px 20px; text-align: left; margin-bottom: 6px; }
+  .detail-grid .d-label { font-size: 13px; color: var(--muted); }
+  .detail-grid .d-value { font-size: 16px; color: var(--ink); font-weight: bold; margin-bottom: 10px; }
+
+  /* ---------- Auth (login) overlay ---------- */
+  .auth-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    z-index: 500;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+    background:
+      radial-gradient(circle at 15% 10%, rgba(33,150,243,0.35), transparent 45%),
+      radial-gradient(circle at 85% 90%, rgba(10,91,176,0.4), transparent 50%),
+      linear-gradient(160deg, var(--blue-1) 0%, var(--blue-2) 45%, var(--blue-3) 100%);
+  }
+  .auth-overlay.active { display: flex; }
+
+  .auth-card {
+    background: #fff;
+    border-radius: 20px;
+    padding: 34px 30px;
+    width: 100%;
+    max-width: 380px;
+    box-shadow: 0 24px 60px rgba(0,0,0,0.35);
+    text-align: center;
+  }
+  .auth-card .logo-mini {
+    width: 64px; height: 64px; border-radius: 50%; overflow: hidden;
+    border: 3px solid var(--gold); margin: 0 auto 14px;
+  }
+  .auth-card .logo-mini img { width: 100%; height: 100%; object-fit: cover; }
+  .auth-card h2 { text-align: center; color: var(--ink); font-size: 28px; margin-bottom: 4px; }
+  .auth-card .auth-sub { color: var(--muted); font-size: 13px; margin-bottom: 22px; }
+  .auth-card .field { margin-bottom: 14px; }
+  .auth-card .btn-primary { width: 100%; justify-content: center; margin-top: 4px; }
+  .auth-error { color: var(--danger); font-size: 13px; min-height: 1.2em; margin-top: 10px; text-align: left; }
+
+  /* ---------- Responsive ---------- */
+  @media (max-width: 900px) {
+    .summary-row { grid-template-columns: repeat(2, 1fr); }
+  }
+
+  @media (max-width: 768px) {
+    .sidebar {
+      position: fixed;
+      left: 0;
+      top: 0;
+      transform: translateX(-100%);
+      box-shadow: 6px 0 24px rgba(0,0,0,0.3);
+    }
+
+    body.sidebar-open .sidebar { transform: translateX(0); }
+    body.sidebar-open .overlay { display: block; }
+
+    .menu-toggle { display: inline-flex; }
+
+    .stat-row { grid-template-columns: 1fr; }
+    .info-card { flex-direction: column; align-items: center; text-align: center; }
+    .info-card .body { text-align: center; }
+    .summary-row { grid-template-columns: 1fr; }
+    .detail-grid { grid-template-columns: 1fr; }
+    .field-grid { grid-template-columns: 1fr; }
+  }
+
+  @media print {
+    .sidebar, .topbar, .btn-row, .row-actions, .overlay { display: none !important; }
+    .content { padding: 0; }
+  }
+</style>
+</head>
+<body>
+
+  <!-- Login gate -->
+  <div class="auth-overlay active" id="authOverlay">
+    <div class="auth-card">
+      <div class="logo-mini"><img src="มนัส.jpg" alt="โลโก้มนัสฟาร์ม"></div>
+      <h2>มนัสฟาร์ม</h2>
+      <div class="auth-sub">เข้าสู่ระบบเพื่อจัดการข้อมูลฟาร์ม</div>
+      <form id="loginForm">
+        <div class="field">
+          <label>อีเมล</label>
+          <input type="email" id="loginEmail" required autocomplete="username">
+        </div>
+        <div class="field">
+          <label>รหัสผ่าน</label>
+          <input type="password" id="loginPassword" required autocomplete="current-password">
+        </div>
+        <button type="submit" class="btn btn-primary" id="loginSubmitBtn">เข้าสู่ระบบ</button>
+        <div class="auth-error" id="loginError"></div>
+      </form>
+    </div>
+  </div>
+
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-header">
+      <div class="logo-mini"><img src="มนัส.jpg" alt="โลโก้มนัสฟาร์ม"></div>
+      <div class="title">มนัสฟาร์ม</div>
+    </div>
+    <ul class="nav">
+      <li><a href="#" class="active" data-page="overview"><span class="icon">🏠</span> ภาพรวม</a></li>
+      <li><a href="#" data-page="ponds"><span class="icon">🌊</span> บ่อเลี้ยง</a></li>
+      <li><a href="#" data-page="production"><span class="icon">🦐</span> ผลผลิต</a></li>
+      <li><a href="#" data-page="cost"><span class="icon">💰</span> คำนวณต้นทุน</a></li>
+      <li><a href="#" data-page="report"><span class="icon">📊</span> รายงาน</a></li>
+      <li><a href="#" data-page="dailylog"><span class="icon">📝</span> บันทึกรายวัน</a></li>
+      <li><a href="#" data-page="settings"><span class="icon">⚙️</span> ตั้งค่า</a></li>
+    </ul>
+    <div class="sidebar-footer">© 2026 มนัสฟาร์ม</div>
+  </aside>
+
+  <div class="overlay" id="overlay"></div>
+
+  <div class="main">
+    <header class="topbar">
+      <div class="topbar-left">
+        <button class="menu-toggle" id="menuToggle" aria-label="เปิดเมนู">☰</button>
+        <span class="page-title" id="pageTitle">ภาพรวม</span>
+      </div>
+      <div class="topbar-right">
+        <span class="user-email" id="userEmailLabel"></span>
+        <button class="btn btn-outline btn-sm" id="logoutBtn">ออกจากระบบ</button>
+      </div>
+    </header>
+
+    <main class="content">
+      <div class="page-wrap">
+
+        <!-- ================= ภาพรวม ================= -->
+        <section class="page active" id="page-overview">
+          <section class="hero">
+            <div class="logo-wrap">
+              <img src="มนัส.jpg" alt="โลโก้มนัสฟาร์ม">
+            </div>
+            <h1 class="farm-name" id="farmNameEl">มนัสฟาร์ม</h1>
+            <p class="owner-name">เจ้าของฟาร์ม: <span id="ownerNameEl">คุณอัญมณี</span></p>
+          </section>
+
+          <div class="info-grid">
+            <div class="info-card">
+              <div class="icon">📍</div>
+              <div class="body">
+                <div class="label">ที่อยู่ / ที่ตั้งฟาร์ม</div>
+                <div class="value" id="farmAddressEl">226 หมู่ 4 ตำบลไสไทย อำเภอเมือง จังหวัดกระบี่</div>
+              </div>
+            </div>
+
+            <div class="stat-row">
+              <div class="stat-card">
+                <div class="icon">🌊</div>
+                <div class="value" id="pondCountStat">10</div>
+                <div class="label">บ่อเลี้ยงกุ้ง</div>
+              </div>
+              <div class="stat-card">
+                <div class="icon">🦐</div>
+                <div class="value">กุลาดำ</div>
+                <div class="label">ชนิดกุ้งที่เลี้ยง</div>
+              </div>
+            </div>
+          </div>
+
+          <div class="map-panel">
+            <h3>ตำแหน่งฟาร์ม</h3>
+            <div class="map-hint">คลิกบนแผนที่เพื่อย้ายตำแหน่งหมุด</div>
+            <div id="farmMap"></div>
+          </div>
+
+          <footer class="page-footer">© 2026 มนัสฟาร์ม จังหวัดกระบี่</footer>
+        </section>
+
+        <!-- ================= บ่อเลี้ยง ================= -->
+        <section class="page" id="page-ponds">
+          <div class="section-head">
+            <div>
+              <h2>บ่อเลี้ยง (Pond Management)</h2>
+              <div class="section-sub">รายชื่อบ่อทั้งหมด สถานะ และคุณภาพน้ำล่าสุด</div>
+            </div>
+            <div class="btn-row">
+              <button class="btn btn-primary" id="addPondBtn">+ เพิ่มบ่อใหม่</button>
+            </div>
+          </div>
+          <div class="panel">
+            <div class="table-wrap">
+              <table id="pondsTable">
+                <thead>
+                  <tr>
+                    <th>รหัสบ่อ</th>
+                    <th>สถานะ</th>
+                    <th class="num">ขนาด (ไร่)</th>
+                    <th class="num">ความลึก (ม.)</th>
+                    <th>ชนิดที่เลี้ยง</th>
+                    <th>วันที่ปล่อยลูกพันธุ์</th>
+                    <th class="num">อายุการเลี้ยง</th>
+                    <th>คุณภาพน้ำ (pH / DO / อุณหภูมิ / ความเค็ม)</th>
+                    <th>จัดการ</th>
+                  </tr>
+                </thead>
+                <tbody></tbody>
+              </table>
+            </div>
+          </div>
+        </section>
+
+        <!-- ================= ผลผลิต ================= -->
+        <section class="page" id="page-production">
+          <div class="section-head">
+            <div>
+              <h2>ผลผลิต (Production / Yield)</h2>
+              <div class="section-sub">ผลผลิต อัตราการรอด และ FCR ของแต่ละบ่อ</div>
+            </div>
+          </div>
+
+          <div class="panel">
+            <h3>เปรียบเทียบผลผลิตแต่ละบ่อ (กก.)</h3>
+            <div class="bar-chart" id="yieldChart"></div>
+          </div>
+
+          <div class="panel">
+            <div class="table-wrap">
+              <table id="productionTable">
+                <thead>
+                  <tr>
+                    <th>รหัสบ่อ</th>
+                    <th class="num">ผลผลิต (กก.)</th>
+                    <th class="num">อัตราการรอด (%)</th>
+                    <th class="num">FCR</th>
+                    <th>วันที่เก็บเกี่ยว</th>
+                    <th>ไซซ์ / เกรด</th>
+                    <th>จัดการ</th>
+                  </tr>
+                </thead>
+                <tbody></tbody>
+              </table>
+            </div>
+          </div>
+        </section>
+
+        <!-- ================= คำนวณต้นทุน ================= -->
+        <section class="page" id="page-cost">
+          <div class="section-head">
+            <div>
+              <h2>คำนวณต้นทุน (Cost)</h2>
+              <div class="section-sub">ต้นทุนแยกตามหมวด ต้นทุนรวม และต้นทุนต่อกิโลกรัม</div>
+            </div>
+            <div class="btn-row">
+              <button class="btn btn-primary" id="addCostBtn">+ เพิ่มรายการค่าใช้จ่าย</button>
+            </div>
+          </div>
+
+          <div class="panel">
+            <h3>ต้นทุนรวมแยกตามหมวด (ทั้งฟาร์ม)</h3>
+            <div id="costCategoryBreakdown"></div>
+          </div>
+
+          <div class="panel">
+            <h3>เปรียบเทียบต้นทุนรวมแต่ละบ่อ (บาท)</h3>
+            <div class="bar-chart" id="costChart"></div>
+          </div>
+
+          <div class="panel">
+            <h3>สรุปต้นทุนแยกตามหมวดต่อบ่อ</h3>
+            <div class="table-wrap">
+              <table id="costTable">
+                <thead>
+                  <tr>
+                    <th>รหัสบ่อ</th>
+                    <th class="num">ค่าลูกพันธุ์</th>
+                    <th class="num">ค่าอาหาร</th>
+                    <th class="num">ค่าไฟ/น้ำมัน</th>
+                    <th class="num">ค่ายา/เคมีภัณฑ์</th>
+                    <th class="num">ค่าแรงงาน</th>
+                    <th class="num">ต้นทุนรวม</th>
+                    <th class="num">ต้นทุน/กก.</th>
+                  </tr>
+                </thead>
+                <tbody></tbody>
+              </table>
+            </div>
+          </div>
+
+          <div class="panel">
+            <h3>รายการค่าใช้จ่ายทั้งหมด</h3>
+            <div class="table-wrap">
+              <table id="costItemsTable">
+                <thead>
+                  <tr>
+                    <th>รหัสบ่อ</th>
+                    <th>หมวดหมู่</th>
+                    <th>รายละเอียด</th>
+                    <th class="num">จำนวนเงิน (บาท)</th>
+                    <th>จัดการ</th>
+                  </tr>
+                </thead>
+                <tbody></tbody>
+              </table>
+            </div>
+          </div>
+        </section>
+
+        <!-- ================= รายงาน ================= -->
+        <section class="page" id="page-report">
+          <div class="section-head">
+            <div>
+              <h2>รายงาน (Report)</h2>
+              <div class="section-sub">สรุปกำไร-ขาดทุน ภาพรวมทั้งฟาร์ม และแนวโน้ม</div>
+            </div>
+            <div class="btn-row">
+              <button class="btn btn-outline btn-sm" id="exportExcelBtn">⬇️ Export Excel (CSV)</button>
+              <button class="btn btn-primary btn-sm" id="exportPdfBtn">🖨️ Export PDF</button>
+            </div>
+          </div>
+
+          <div class="summary-row" id="summaryRow"></div>
+
+          <div class="panel">
+            <h3>สรุปกำไร-ขาดทุนต่อบ่อ <span style="font-weight:normal;color:var(--muted);font-size:13px;">(ราคาขาย <span id="sellPriceHint">180</span> บาท/กก.)</span></h3>
+            <div class="table-wrap">
+              <table id="reportTable">
+                <thead>
+                  <tr>
+                    <th>รหัสบ่อ</th>
+                    <th>สถานะ</th>
+                    <th class="num">รายได้ (บาท)</th>
+                    <th class="num">ต้นทุนรวม (บาท)</th>
+                    <th class="num">กำไร/ขาดทุน (บาท)</th>
+                    <th class="num">มาร์จิ้น (%)</th>
+                  </tr>
+                </thead>
+                <tbody></tbody>
+              </table>
+            </div>
+          </div>
+
+          <div class="panel">
+            <h3>แนวโน้มผลผลิตรายเดือน (กก.)</h3>
+            <div class="bar-chart" id="trendYieldChart"></div>
+          </div>
+
+          <div class="panel">
+            <h3>แนวโน้มต้นทุน vs กำไรรายเดือน (บาท)</h3>
+            <div class="bar-chart" id="trendProfitChart"></div>
+          </div>
+        </section>
+
+        <!-- ================= บันทึกรายวัน ================= -->
+        <section class="page" id="page-dailylog">
+          <div class="section-head">
+            <div>
+              <h2>บันทึกรายวัน (Daily Log)</h2>
+              <div class="section-sub">บันทึกค่าที่ต้องการติดตามรายวัน เช่น น้ำหนักตัวกุ้ง หรือค่าที่วัดได้อื่นๆ</div>
+            </div>
+          </div>
+
+          <div class="panel">
+            <div class="field-grid">
+              <div class="field">
+                <label>บ่อที่</label>
+                <select id="dlPond"></select>
+              </div>
+              <div class="field">
+                <label>วันที่</label>
+                <input type="date" id="dlDate">
+              </div>
+            </div>
+            <div class="field">
+              <label>น้ำหนักตัว / ค่าที่บันทึก</label>
+              <input type="number" id="dlValue" step="0.01" placeholder="0">
+            </div>
+            <div class="field">
+              <label>บันทึกเพิ่มเติม</label>
+              <input type="text" id="dlNote" placeholder="รายละเอียดเพิ่มเติม (ถ้ามี)">
+            </div>
+            <div class="btn-row">
+              <button class="btn btn-primary" id="dailyLogSaveBtn">บันทึก</button>
+            </div>
+          </div>
+
+          <div class="panel">
+            <h3>ประวัติที่บันทึกไว้</h3>
+            <div class="table-wrap">
+              <table id="dailyLogTable">
+                <thead>
+                  <tr>
+                    <th>บ่อ</th>
+                    <th>วันที่</th>
+                    <th class="num">ค่าที่บันทึก</th>
+                    <th>บันทึกเพิ่มเติม</th>
+                  </tr>
+                </thead>
+                <tbody></tbody>
+              </table>
+            </div>
+          </div>
+        </section>
+
+        <!-- ================= ตั้งค่า ================= -->
+        <section class="page" id="page-settings">
+          <div class="section-head">
+            <div>
+              <h2>ตั้งค่า</h2>
+              <div class="section-sub">ข้อมูลฟาร์มและการตั้งค่าระบบ</div>
+            </div>
+          </div>
+          <div class="panel">
+            <div class="detail-grid">
+              <div><div class="d-label">ชื่อฟาร์ม</div><div class="d-value" id="stFarmName">มนัสฟาร์ม</div></div>
+              <div><div class="d-label">เจ้าของฟาร์ม</div><div class="d-value" id="stOwnerName">คุณอัญมณี</div></div>
+              <div><div class="d-label">ที่อยู่</div><div class="d-value" id="stAddress">226 หมู่ 4 ตำบลไสไทย อำเภอเมือง จังหวัดกระบี่</div></div>
+              <div><div class="d-label">ราคาขายที่ใช้คำนวณ</div><div class="d-value" id="stSellPrice">180 บาท/กก.</div></div>
+            </div>
+          </div>
+        </section>
+
+      </div>
+    </main>
+  </div>
+
+  <!-- Pond detail (view-only) modal -->
+  <div class="modal-overlay" id="pondModal">
+    <div class="modal-box">
+      <h3 id="pondModalTitle">รายละเอียดบ่อ</h3>
+      <div class="detail-grid" id="pondModalBody"></div>
+      <div class="btn-row" style="margin-top:10px;">
+        <button class="btn btn-outline btn-sm" id="pondModalClose">ปิด</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Add / edit pond modal -->
+  <div class="modal-overlay" id="pondFormModal">
+    <div class="modal-box">
+      <h3 id="pondFormTitle">เพิ่มบ่อใหม่</h3>
+      <input type="hidden" id="pondFormId">
+      <div class="field">
+        <label>รหัสบ่อ</label>
+        <input type="text" id="pfCode" placeholder="เช่น บ่อ 11">
+      </div>
+      <div class="field-grid">
+        <div class="field">
+          <label>สถานะ</label>
+          <select id="pfStatus">
+            <option value="empty">ว่าง</option>
+            <option value="growing">กำลังเลี้ยง</option>
+            <option value="prep">เตรียมบ่อ</option>
+            <option value="harvested">เก็บเกี่ยวแล้ว</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>ชนิดที่เลี้ยง</label>
+          <input type="text" id="pfSpecies" placeholder="กุ้งกุลาดำ">
+        </div>
+      </div>
+      <div class="field-grid">
+        <div class="field">
+          <label>ขนาด (ไร่)</label>
+          <input type="number" id="pfSize" step="0.1" min="0">
+        </div>
+        <div class="field">
+          <label>ความลึก (ม.)</label>
+          <input type="number" id="pfDepth" step="0.1" min="0">
+        </div>
+      </div>
+      <div class="field">
+        <label>วันที่ปล่อยลูกพันธุ์</label>
+        <input type="date" id="pfRelease">
+      </div>
+      <div class="field-grid">
+        <div class="field">
+          <label>pH</label>
+          <input type="number" id="pfPh" step="0.1">
+        </div>
+        <div class="field">
+          <label>DO (mg/L)</label>
+          <input type="number" id="pfDo" step="0.1">
+        </div>
+      </div>
+      <div class="field-grid">
+        <div class="field">
+          <label>อุณหภูมิ (°C)</label>
+          <input type="number" id="pfTemp" step="0.1">
+        </div>
+        <div class="field">
+          <label>ความเค็ม (ppt)</label>
+          <input type="number" id="pfSalinity" step="0.1">
+        </div>
+      </div>
+      <div class="btn-row">
+        <button class="btn btn-primary" id="pondFormSaveBtn">บันทึก</button>
+        <button class="btn btn-outline" id="pondFormCancelBtn">ยกเลิก</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Edit production modal -->
+  <div class="modal-overlay" id="productionModal">
+    <div class="modal-box">
+      <h3 id="productionFormTitle">แก้ไขข้อมูลผลผลิต</h3>
+      <input type="hidden" id="pdFormId">
+      <div class="field-grid">
+        <div class="field">
+          <label>ผลผลิต (กก.)</label>
+          <input type="number" id="pdYield" min="0">
+        </div>
+        <div class="field">
+          <label>อัตราการรอด (%)</label>
+          <input type="number" id="pdSurvival" min="0" max="100">
+        </div>
+      </div>
+      <div class="field-grid">
+        <div class="field">
+          <label>FCR</label>
+          <input type="number" id="pdFcr" step="0.01" min="0">
+        </div>
+        <div class="field">
+          <label>วันที่เก็บเกี่ยว</label>
+          <input type="date" id="pdHarvest">
+        </div>
+      </div>
+      <div class="field">
+        <label>ไซซ์ / เกรด</label>
+        <input type="text" id="pdGrade" placeholder="เช่น 40 ตัว/กก.">
+      </div>
+      <div class="btn-row">
+        <button class="btn btn-primary" id="productionSaveBtn">บันทึก</button>
+        <button class="btn btn-outline" id="productionCancelBtn">ยกเลิก</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Add / edit cost item modal -->
+  <div class="modal-overlay" id="costModal">
+    <div class="modal-box">
+      <h3 id="costFormTitle">เพิ่มรายการค่าใช้จ่าย</h3>
+      <input type="hidden" id="costFormId">
+      <div class="field">
+        <label>เลือกบ่อ</label>
+        <select id="costPondSelect"></select>
+      </div>
+      <div class="field">
+        <label>หมวดหมู่</label>
+        <select id="costCategorySelect">
+          <option value="seed">ค่าลูกพันธุ์</option>
+          <option value="feed">ค่าอาหาร</option>
+          <option value="utility">ค่าไฟ/น้ำมัน</option>
+          <option value="chem">ค่ายา/เคมีภัณฑ์</option>
+          <option value="labor">ค่าแรงงาน</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>รายละเอียด</label>
+        <input type="text" id="costDesc" placeholder="เช่น อาหารกุ้งเบอร์ 2">
+      </div>
+      <div class="field">
+        <label>จำนวนเงิน (บาท)</label>
+        <input type="number" id="costAmount" placeholder="0" min="0">
+      </div>
+      <div class="btn-row">
+        <button class="btn btn-primary" id="costSaveBtn">บันทึก</button>
+        <button class="btn btn-outline" id="costCancelBtn">ยกเลิก</button>
+      </div>
+    </div>
+  </div>
+
+<script>
+  /* ---------------- Supabase client ---------------- */
+  const supabaseClient = supabase.createClient(
+    'https://jwmtvhebqblchbdahzhe.supabase.co',
+    'sb_publishable_rgN7JnGE64k8V80E3ky-3g_XopWo8dK'
+  );
+
+  /* ---------------- Data ---------------- */
+  const CATS = { seed: 'ค่าลูกพันธุ์', feed: 'ค่าอาหาร', utility: 'ค่าไฟ/น้ำมัน', chem: 'ค่ายา/เคมีภัณฑ์', labor: 'ค่าแรงงาน' };
+  const STATUS_LABEL = { empty: 'ว่าง', growing: 'กำลังเลี้ยง', prep: 'เตรียมบ่อ', harvested: 'เก็บเกี่ยวแล้ว' };
+  const STATUS_BADGE = { empty: 'badge-empty', growing: 'badge-growing', prep: 'badge-prep', harvested: 'badge-harvested' };
+
+  // In-memory cache mirroring the Supabase tables — populated by loadPonds()/
+  // loadCostItems()/loadFarmSettings() after login, refreshed after every mutation.
+  let PONDS = [];
+  let COST_ITEMS = [];
+  let FARM_SETTINGS = {
+    farm_name: 'มนัสฟาร์ม',
+    owner_name: 'คุณอัญมณี',
+    address: '226 หมู่ 4 ตำบลไสไทย อำเภอเมือง จังหวัดกระบี่',
+    sell_price: 180
+  };
+
+  /* ---------------- DB <-> JS field mapping ---------------- */
+  // ponds.do_level -> p.do, ponds.release_date -> p.release, ponds.harvest_date -> p.harvest,
+  // ponds.yield_kg -> p.yieldKg (DB uses snake_case; the rest of this file was written against
+  // these JS-shaped names, so the mapping lives here instead of touching every render function).
+  function pondFromDb(row) {
+    return {
+      id: row.id, code: row.code, status: row.status, size: row.size, depth: row.depth,
+      species: row.species, release: row.release_date, ph: row.ph, do: row.do_level,
+      temp: row.temp, salinity: row.salinity, yieldKg: row.yield_kg, survival: row.survival,
+      fcr: row.fcr, harvest: row.harvest_date, grade: row.grade,
+    };
+  }
+  function pondToDb(p) {
+    return {
+      code: p.code, status: p.status, size: p.size, depth: p.depth, species: p.species,
+      release_date: p.release, ph: p.ph, do_level: p.do, temp: p.temp, salinity: p.salinity,
+    };
+  }
+  function costItemFromDb(row) {
+    return { id: row.id, pondId: row.pond_id, category: row.category, desc: row.description, amount: row.amount, createdAt: row.created_at };
+  }
+
+  async function loadPonds() {
+    const { data, error } = await supabaseClient.from('ponds').select('*').order('id');
+    if (error) { alert('โหลดข้อมูลบ่อไม่สำเร็จ: ' + error.message); return; }
+    PONDS = data.map(pondFromDb);
+  }
+
+  async function loadCostItems() {
+    const { data, error } = await supabaseClient.from('cost_items').select('*').order('id');
+    if (error) { alert('โหลดข้อมูลต้นทุนไม่สำเร็จ: ' + error.message); return; }
+    COST_ITEMS = data.map(costItemFromDb);
+  }
+
+  async function loadFarmSettings() {
+    const { data, error } = await supabaseClient.from('farm_settings').select('*').eq('id', 1).maybeSingle();
+    if (error || !data) return; // keep the defaults above if this fails
+    FARM_SETTINGS = { farm_name: data.farm_name, owner_name: data.owner_name, address: data.address, sell_price: data.sell_price };
+  }
+
+  function applyFarmSettingsToUI() {
+    document.getElementById('farmNameEl').textContent = FARM_SETTINGS.farm_name;
+    document.getElementById('ownerNameEl').textContent = FARM_SETTINGS.owner_name;
+    document.getElementById('farmAddressEl').textContent = FARM_SETTINGS.address;
+    document.getElementById('sellPriceHint').textContent = fmt(FARM_SETTINGS.sell_price);
+    document.getElementById('stFarmName').textContent = FARM_SETTINGS.farm_name;
+    document.getElementById('stOwnerName').textContent = FARM_SETTINGS.owner_name;
+    document.getElementById('stAddress').textContent = FARM_SETTINGS.address;
+    document.getElementById('stSellPrice').textContent = fmt(FARM_SETTINGS.sell_price) + ' บาท/กก.';
+  }
+
+  // Monthly farm-wide trend, derived from real data (last 6 calendar months):
+  // yield is summed by each pond's harvest month, cost by when each cost item was logged.
+  function monthKeyOf(dateStr) {
+    const d = new Date(dateStr);
+    return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0');
+  }
+
+  function buildTrend() {
+    const now = new Date();
+    const months = [];
+    for (let i = 5; i >= 0; i--) {
+      const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+      months.push({
+        key: d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0'),
+        label: d.toLocaleDateString('th-TH', { month: 'short', year: '2-digit' }),
+      });
+    }
+
+    const yieldByMonth = {}, costByMonth = {};
+    months.forEach(m => { yieldByMonth[m.key] = 0; costByMonth[m.key] = 0; });
+
+    PONDS.forEach(p => {
+      if (!p.harvest) return;
+      const k = monthKeyOf(p.harvest);
+      if (k in yieldByMonth) yieldByMonth[k] += p.yieldKg || 0;
+    });
+
+    COST_ITEMS.forEach(item => {
+      if (!item.createdAt) return;
+      const k = monthKeyOf(item.createdAt);
+      if (k in costByMonth) costByMonth[k] += item.amount;
+    });
+
+    const rows = months.map(m => {
+      const yieldKg = yieldByMonth[m.key];
+      const cost = costByMonth[m.key];
+      const revenue = yieldKg * FARM_SETTINGS.sell_price;
+      return { month: m.label, yield: yieldKg, cost, profit: revenue - cost };
+    });
+
+    const hasData = rows.some(r => r.yield > 0 || r.cost > 0);
+    return { rows, hasData };
+  }
+
+  function fmt(n) { return Math.round(n).toLocaleString('th-TH'); }
+
+  function ageLabel(releaseDate) {
+    if (!releaseDate) return '-';
+    const days = Math.floor((Date.now() - new Date(releaseDate + 'T00:00:00')) / 86400000);
+    if (days < 0) return '-';
+    return days + ' วัน';
+  }
+
+  function findPond(id) { return PONDS.find(x => x.id === id); }
+
+  function costTotal(pondId) {
+    return COST_ITEMS.filter(i => i.pondId === pondId).reduce((sum, i) => sum + i.amount, 0);
+  }
+
+  function catTotalForPond(pondId, cat) {
+    return COST_ITEMS.filter(i => i.pondId === pondId && i.category === cat).reduce((sum, i) => sum + i.amount, 0);
+  }
+
+  /* ---------------- Render: ponds ---------------- */
+  function renderPonds() {
+    document.getElementById('pondCountStat').textContent = PONDS.length;
+
+    const tbody = document.querySelector('#pondsTable tbody');
+    if (PONDS.length === 0) {
+      tbody.innerHTML = `<tr class="empty-row"><td colspan="9">ยังไม่มีข้อมูลบ่อ</td></tr>`;
+      return;
+    }
+    tbody.innerHTML = PONDS.map(p => {
+      const water = (p.ph !== null && p.ph !== undefined)
+        ? `${p.ph} / ${p.do} mg/L / ${p.temp}°C / ${p.salinity} ppt`
+        : '<span style="color:var(--muted)">- ไม่มีการบันทึก -</span>';
+      return `
+        <tr>
+          <td><strong>${p.code}</strong></td>
+          <td><span class="badge ${STATUS_BADGE[p.status]}">${STATUS_LABEL[p.status]}</span></td>
+          <td class="num">${p.size}</td>
+          <td class="num">${p.depth}</td>
+          <td>${p.species}</td>
+          <td>${p.release ? new Date(p.release).toLocaleDateString('th-TH', { year: 'numeric', month: 'short', day: 'numeric' }) : '-'}</td>
+          <td class="num">${ageLabel(p.release)}</td>
+          <td>${water}</td>
+          <td>
+            <div class="row-actions">
+              <button class="btn btn-outline btn-sm" onclick="openPondDetail(${p.id})">ดู</button>
+              <button class="btn btn-outline btn-sm" onclick="openPondForm(${p.id})">แก้ไข</button>
+              <button class="btn btn-danger btn-sm" onclick="deletePond(${p.id})">ลบ</button>
+            </div>
+          </td>
+        </tr>`;
+    }).join('');
+  }
+
+  function openPondDetail(id) {
+    const p = findPond(id);
+    document.getElementById('pondModalTitle').textContent = `รายละเอียด ${p.code}`;
+    const total = costTotal(p.id);
+    document.getElementById('pondModalBody').innerHTML = `
+      <div><div class="d-label">สถานะ</div><div class="d-value">${STATUS_LABEL[p.status]}</div></div>
+      <div><div class="d-label">ชนิดที่เลี้ยง</div><div class="d-value">${p.species}</div></div>
+      <div><div class="d-label">ขนาดบ่อ</div><div class="d-value">${p.size} ไร่</div></div>
+      <div><div class="d-label">ความลึก</div><div class="d-value">${p.depth} ม.</div></div>
+      <div><div class="d-label">วันที่ปล่อยลูกพันธุ์</div><div class="d-value">${p.release ? p.release : '-'}</div></div>
+      <div><div class="d-label">อายุการเลี้ยง</div><div class="d-value">${ageLabel(p.release)}</div></div>
+      <div><div class="d-label">pH / DO</div><div class="d-value">${p.ph ?? '-'} / ${p.do ?? '-'}</div></div>
+      <div><div class="d-label">อุณหภูมิ / ความเค็ม</div><div class="d-value">${p.temp ?? '-'}°C / ${p.salinity ?? '-'} ppt</div></div>
+      <div><div class="d-label">ผลผลิต</div><div class="d-value">${p.yieldKg ? fmt(p.yieldKg) + ' กก.' : '-'}</div></div>
+      <div><div class="d-label">ต้นทุนรวม</div><div class="d-value">${fmt(total)} บาท</div></div>
+    `;
+    document.getElementById('pondModal').classList.add('active');
+  }
+  document.getElementById('pondModalClose').addEventListener('click', () => {
+    document.getElementById('pondModal').classList.remove('active');
+  });
+
+  /* ---------------- Pond add / edit form ---------------- */
+  const pondFormModal = document.getElementById('pondFormModal');
+
+  function openPondForm(id) {
+    const isEdit = id !== null;
+    document.getElementById('pondFormTitle').textContent = isEdit ? 'แก้ไขข้อมูลบ่อ' : 'เพิ่มบ่อใหม่';
+    document.getElementById('pondFormId').value = isEdit ? id : '';
+
+    const p = isEdit ? findPond(id) : null;
+    document.getElementById('pfCode').value = p ? p.code : '';
+    document.getElementById('pfStatus').value = p ? p.status : 'empty';
+    document.getElementById('pfSpecies').value = p ? (p.species === '-' ? '' : p.species) : '';
+    document.getElementById('pfSize').value = p ? p.size : '';
+    document.getElementById('pfDepth').value = p ? p.depth : '';
+    document.getElementById('pfRelease').value = p && p.release ? p.release : '';
+    document.getElementById('pfPh').value = p && p.ph !== null ? p.ph : '';
+    document.getElementById('pfDo').value = p && p.do !== null ? p.do : '';
+    document.getElementById('pfTemp').value = p && p.temp !== null ? p.temp : '';
+    document.getElementById('pfSalinity').value = p && p.salinity !== null ? p.salinity : '';
+
+    pondFormModal.classList.add('active');
+  }
+
+  document.getElementById('addPondBtn').addEventListener('click', () => openPondForm(null));
+  document.getElementById('pondFormCancelBtn').addEventListener('click', () => pondFormModal.classList.remove('active'));
+
+  document.getElementById('pondFormSaveBtn').addEventListener('click', async () => {
+    const idVal = document.getElementById('pondFormId').value;
+    const code = document.getElementById('pfCode').value.trim();
+    if (!code) { alert('กรุณาระบุรหัสบ่อ'); return; }
+
+    const dbData = pondToDb({
+      code,
+      status: document.getElementById('pfStatus').value,
+      species: document.getElementById('pfSpecies').value.trim() || '-',
+      size: parseFloat(document.getElementById('pfSize').value) || 0,
+      depth: parseFloat(document.getElementById('pfDepth').value) || 0,
+      release: document.getElementById('pfRelease').value || null,
+      ph: document.getElementById('pfPh').value !== '' ? parseFloat(document.getElementById('pfPh').value) : null,
+      do: document.getElementById('pfDo').value !== '' ? parseFloat(document.getElementById('pfDo').value) : null,
+      temp: document.getElementById('pfTemp').value !== '' ? parseFloat(document.getElementById('pfTemp').value) : null,
+      salinity: document.getElementById('pfSalinity').value !== '' ? parseFloat(document.getElementById('pfSalinity').value) : null,
+    });
+
+    const saveBtn = document.getElementById('pondFormSaveBtn');
+    saveBtn.disabled = true;
+    const { error } = idVal
+      ? await supabaseClient.from('ponds').update(dbData).eq('id', parseInt(idVal, 10))
+      : await supabaseClient.from('ponds').insert(dbData);
+    saveBtn.disabled = false;
+
+    if (error) { alert('บันทึกไม่สำเร็จ: ' + error.message); return; }
+
+    pondFormModal.classList.remove('active');
+    await loadPonds();
+    renderAll();
+  });
+
+  async function deletePond(id) {
+    const p = findPond(id);
+    if (!confirm(`ต้องการลบ ${p.code} ใช่หรือไม่? ข้อมูลต้นทุนที่เกี่ยวข้องจะถูกลบด้วย`)) return;
+    const { error } = await supabaseClient.from('ponds').delete().eq('id', id);
+    if (error) { alert('ลบไม่สำเร็จ: ' + error.message); return; }
+    await Promise.all([loadPonds(), loadCostItems()]);
+    renderAll();
+  }
+
+  /* ---------------- Render: production ---------------- */
+  function renderProduction() {
+    const chart = document.getElementById('yieldChart');
+    if (PONDS.length === 0) {
+      chart.innerHTML = '';
+    } else {
+      const max = Math.max(...PONDS.map(p => p.yieldKg), 1);
+      chart.innerHTML = PONDS.map(p => `
+        <div class="bar-col">
+          <div class="bar-val">${p.yieldKg ? fmt(p.yieldKg) : '-'}</div>
+          <div class="bar" style="height:${p.yieldKg ? Math.max((p.yieldKg / max) * 100, 3) : 2}%"></div>
+          <div class="bar-label">${p.code.replace('บ่อ ', '#')}</div>
+        </div>`).join('');
+    }
+
+    const tbody = document.querySelector('#productionTable tbody');
+    if (PONDS.length === 0) {
+      tbody.innerHTML = `<tr class="empty-row"><td colspan="7">ยังไม่มีข้อมูลผลผลิต</td></tr>`;
+      return;
+    }
+    tbody.innerHTML = PONDS.map(p => `
+      <tr>
+        <td><strong>${p.code}</strong></td>
+        <td class="num">${p.yieldKg ? fmt(p.yieldKg) : '-'}</td>
+        <td class="num">${p.survival ?? '-'}</td>
+        <td class="num">${p.fcr ?? '-'}</td>
+        <td>${p.harvest ? p.harvest : (p.yieldKg ? 'ยังไม่เก็บเกี่ยว (ประมาณการ)' : '-')}</td>
+        <td>${p.grade}</td>
+        <td><button class="btn btn-outline btn-sm" onclick="openProductionForm(${p.id})">แก้ไข</button></td>
+      </tr>`).join('');
+  }
+
+  const productionModal = document.getElementById('productionModal');
+  function openProductionForm(id) {
+    const p = findPond(id);
+    document.getElementById('productionFormTitle').textContent = `แก้ไขผลผลิต — ${p.code}`;
+    document.getElementById('pdFormId').value = id;
+    document.getElementById('pdYield').value = p.yieldKg || '';
+    document.getElementById('pdSurvival').value = p.survival ?? '';
+    document.getElementById('pdFcr').value = p.fcr ?? '';
+    document.getElementById('pdHarvest').value = p.harvest || '';
+    document.getElementById('pdGrade').value = p.grade === '-' ? '' : p.grade;
+    productionModal.classList.add('active');
+  }
+  document.getElementById('productionCancelBtn').addEventListener('click', () => productionModal.classList.remove('active'));
+  document.getElementById('productionSaveBtn').addEventListener('click', async () => {
+    const id = parseInt(document.getElementById('pdFormId').value, 10);
+    const dbData = {
+      yield_kg: parseFloat(document.getElementById('pdYield').value) || 0,
+      survival: document.getElementById('pdSurvival').value !== '' ? parseFloat(document.getElementById('pdSurvival').value) : null,
+      fcr: document.getElementById('pdFcr').value !== '' ? parseFloat(document.getElementById('pdFcr').value) : null,
+      harvest_date: document.getElementById('pdHarvest').value || null,
+      grade: document.getElementById('pdGrade').value.trim() || '-',
+    };
+
+    const { error } = await supabaseClient.from('ponds').update(dbData).eq('id', id);
+    if (error) { alert('บันทึกไม่สำเร็จ: ' + error.message); return; }
+
+    productionModal.classList.remove('active');
+    await loadPonds();
+    renderAll();
+  });
+
+  /* ---------------- Render: cost ---------------- */
+  function renderCost() {
+    const catTotals = { seed: 0, feed: 0, utility: 0, chem: 0, labor: 0 };
+    COST_ITEMS.forEach(i => { catTotals[i.category] += i.amount; });
+    const grandTotal = Object.values(catTotals).reduce((a, b) => a + b, 0) || 1;
+
+    document.getElementById('costCategoryBreakdown').innerHTML = Object.keys(CATS).map(k => `
+      <div class="cost-cat-row">
+        <div class="cost-cat-top"><span class="name">${CATS[k]}</span><span class="amount">${fmt(catTotals[k])} บาท</span></div>
+        <div class="cost-track"><div class="cost-fill" style="width:${(catTotals[k] / grandTotal) * 100}%"></div></div>
+      </div>`).join('');
+
+    const costChart = document.getElementById('costChart');
+    if (PONDS.length === 0) {
+      costChart.innerHTML = '';
+    } else {
+      const maxCost = Math.max(...PONDS.map(p => costTotal(p.id)), 1);
+      costChart.innerHTML = PONDS.map(p => {
+        const t = costTotal(p.id);
+        return `
+        <div class="bar-col">
+          <div class="bar-val">${fmt(t)}</div>
+          <div class="bar" style="height:${Math.max((t / maxCost) * 100, 3)}%; background:linear-gradient(180deg, var(--gold), var(--blue-3));"></div>
+          <div class="bar-label">${p.code.replace('บ่อ ', '#')}</div>
+        </div>`;
+      }).join('');
+    }
+
+    const tbody = document.querySelector('#costTable tbody');
+    if (PONDS.length === 0) {
+      tbody.innerHTML = `<tr class="empty-row"><td colspan="8">ยังไม่มีข้อมูลต้นทุน</td></tr>`;
+    } else {
+      tbody.innerHTML = PONDS.map(p => {
+        const t = costTotal(p.id);
+        const perKg = p.yieldKg ? t / p.yieldKg : null;
+        return `
+        <tr>
+          <td><strong>${p.code}</strong></td>
+          <td class="num">${fmt(catTotalForPond(p.id, 'seed'))}</td>
+          <td class="num">${fmt(catTotalForPond(p.id, 'feed'))}</td>
+          <td class="num">${fmt(catTotalForPond(p.id, 'utility'))}</td>
+          <td class="num">${fmt(catTotalForPond(p.id, 'chem'))}</td>
+          <td class="num">${fmt(catTotalForPond(p.id, 'labor'))}</td>
+          <td class="num"><strong>${fmt(t)}</strong></td>
+          <td class="num">${perKg ? fmt(perKg) : '-'}</td>
+        </tr>`;
+      }).join('');
+    }
+
+    const itemsBody = document.querySelector('#costItemsTable tbody');
+    if (COST_ITEMS.length === 0) {
+      itemsBody.innerHTML = `<tr class="empty-row"><td colspan="5">ยังไม่มีรายการค่าใช้จ่าย</td></tr>`;
+    } else {
+      itemsBody.innerHTML = COST_ITEMS.slice().sort((a, b) => a.pondId - b.pondId).map(item => {
+        const pond = findPond(item.pondId);
+        return `
+        <tr>
+          <td><strong>${pond ? pond.code : '-'}</strong></td>
+          <td>${CATS[item.category]}</td>
+          <td>${item.desc || '-'}</td>
+          <td class="num">${fmt(item.amount)}</td>
+          <td>
+            <div class="row-actions">
+              <button class="btn btn-outline btn-sm" onclick="openCostForm(${item.id})">แก้ไข</button>
+              <button class="btn btn-danger btn-sm" onclick="deleteCostItem(${item.id})">ลบ</button>
+            </div>
+          </td>
+        </tr>`;
+      }).join('');
+    }
+  }
+
+  /* ---------------- Cost add / edit modal ---------------- */
+  const costModal = document.getElementById('costModal');
+
+  function openCostForm(itemId) {
+    const isEdit = itemId !== null && itemId !== undefined;
+    document.getElementById('costFormTitle').textContent = isEdit ? 'แก้ไขรายการค่าใช้จ่าย' : 'เพิ่มรายการค่าใช้จ่าย';
+    document.getElementById('costFormId').value = isEdit ? itemId : '';
+
+    const sel = document.getElementById('costPondSelect');
+    sel.innerHTML = PONDS.map(p => `<option value="${p.id}">${p.code}</option>`).join('');
+
+    const item = isEdit ? COST_ITEMS.find(i => i.id === itemId) : null;
+    sel.value = item ? item.pondId : (PONDS[0] ? PONDS[0].id : '');
+    document.getElementById('costCategorySelect').value = item ? item.category : 'seed';
+    document.getElementById('costDesc').value = item ? item.desc : '';
+    document.getElementById('costAmount').value = item ? item.amount : '';
+
+    costModal.classList.add('active');
+  }
+
+  document.getElementById('addCostBtn').addEventListener('click', () => {
+    if (PONDS.length === 0) { alert('กรุณาเพิ่มบ่อก่อนเพิ่มรายการค่าใช้จ่าย'); return; }
+    openCostForm(null);
+  });
+  document.getElementById('costCancelBtn').addEventListener('click', () => costModal.classList.remove('active'));
+  document.getElementById('costSaveBtn').addEventListener('click', async () => {
+    const idVal = document.getElementById('costFormId').value;
+    const pondId = parseInt(document.getElementById('costPondSelect').value, 10);
+    const category = document.getElementById('costCategorySelect').value;
+    const description = document.getElementById('costDesc').value.trim();
+    const amount = parseFloat(document.getElementById('costAmount').value) || 0;
+    if (amount <= 0) { alert('กรุณาระบุจำนวนเงินที่ถูกต้อง'); return; }
+
+    const dbData = { pond_id: pondId, category, description, amount };
+    const { error } = idVal
+      ? await supabaseClient.from('cost_items').update(dbData).eq('id', parseInt(idVal, 10))
+      : await supabaseClient.from('cost_items').insert(dbData);
+
+    if (error) { alert('บันทึกไม่สำเร็จ: ' + error.message); return; }
+
+    costModal.classList.remove('active');
+    await loadCostItems();
+    renderAll();
+  });
+
+  async function deleteCostItem(id) {
+    if (!confirm('ต้องการลบรายการค่าใช้จ่ายนี้ใช่หรือไม่?')) return;
+    const { error } = await supabaseClient.from('cost_items').delete().eq('id', id);
+    if (error) { alert('ลบไม่สำเร็จ: ' + error.message); return; }
+    await loadCostItems();
+    renderAll();
+  }
+
+  /* ---------------- Render: report ---------------- */
+  function renderReport() {
+    let totalRevenue = 0, totalCost = 0;
+
+    const rows = PONDS.map(p => {
+      const cost = costTotal(p.id);
+      const revenue = p.yieldKg * FARM_SETTINGS.sell_price;
+      const profit = revenue - cost;
+      const margin = revenue ? (profit / revenue) * 100 : 0;
+      totalRevenue += revenue;
+      totalCost += cost;
+      return { p, cost, revenue, profit, margin };
+    });
+
+    const totalProfit = totalRevenue - totalCost;
+    const totalMargin = totalRevenue ? (totalProfit / totalRevenue) * 100 : 0;
+
+    document.getElementById('summaryRow').innerHTML = `
+      <div class="summary-card"><div class="label">รายได้รวม</div><div class="value">${fmt(totalRevenue)} ฿</div></div>
+      <div class="summary-card"><div class="label">ต้นทุนรวม</div><div class="value">${fmt(totalCost)} ฿</div></div>
+      <div class="summary-card"><div class="label">กำไรสุทธิ</div><div class="value ${totalProfit >= 0 ? 'pos' : 'neg'}">${fmt(totalProfit)} ฿</div></div>
+      <div class="summary-card"><div class="label">มาร์จิ้นรวม</div><div class="value ${totalMargin >= 0 ? 'pos' : 'neg'}">${totalMargin.toFixed(1)}%</div></div>
+    `;
+
+    const tbody = document.querySelector('#reportTable tbody');
+    if (rows.length === 0) {
+      tbody.innerHTML = `<tr class="empty-row"><td colspan="6">ยังไม่มีข้อมูล</td></tr>`;
+    } else {
+      tbody.innerHTML = rows.map(r => `
+        <tr>
+          <td><strong>${r.p.code}</strong></td>
+          <td><span class="badge ${STATUS_BADGE[r.p.status]}">${STATUS_LABEL[r.p.status]}</span></td>
+          <td class="num">${fmt(r.revenue)}</td>
+          <td class="num">${fmt(r.cost)}</td>
+          <td class="num" style="color:${r.profit >= 0 ? '#1b8a3d' : '#d0342c'}"><strong>${fmt(r.profit)}</strong></td>
+          <td class="num">${r.revenue ? r.margin.toFixed(1) + '%' : '-'}</td>
+        </tr>`).join('');
+    }
+
+    const trend = buildTrend();
+    const emptyTrendMsg = '<div style="width:100%;text-align:center;color:var(--muted);padding:60px 0;">ยังไม่มีข้อมูลเพียงพอสำหรับแสดงแนวโน้ม — จะแสดงเมื่อมีบ่อที่เก็บเกี่ยวแล้วหรือมีรายการต้นทุนบันทึกไว้</div>';
+
+    if (!trend.hasData) {
+      document.getElementById('trendYieldChart').innerHTML = emptyTrendMsg;
+      document.getElementById('trendProfitChart').innerHTML = emptyTrendMsg;
+    } else {
+      const maxYield = Math.max(...trend.rows.map(t => t.yield), 1);
+      document.getElementById('trendYieldChart').innerHTML = trend.rows.map(t => `
+        <div class="bar-col">
+          <div class="bar-val">${fmt(t.yield)}</div>
+          <div class="bar" style="height:${(t.yield / maxYield) * 100}%"></div>
+          <div class="bar-label">${t.month}</div>
+        </div>`).join('');
+
+      const maxMoney = Math.max(...trend.rows.map(t => Math.max(t.cost, t.profit)), 1);
+      document.getElementById('trendProfitChart').innerHTML = trend.rows.map(t => `
+        <div class="bar-col" style="flex-direction:row; align-items:flex-end; gap:4px;">
+          <div style="display:flex;flex-direction:column;align-items:center;flex:1;">
+            <div class="bar-val">${fmt(t.cost)}</div>
+            <div class="bar" style="width:80%;height:${(t.cost / maxMoney) * 100}%; background:linear-gradient(180deg,#ef9a9a,#c62828);"></div>
+          </div>
+          <div style="display:flex;flex-direction:column;align-items:center;flex:1;">
+            <div class="bar-val">${fmt(t.profit)}</div>
+            <div class="bar" style="width:80%;height:${(t.profit / maxMoney) * 100}%; background:linear-gradient(180deg, var(--blue-4), #1b8a3d);"></div>
+          </div>
+          <div class="bar-label" style="width:100%;">${t.month}</div>
+        </div>`).join('');
+    }
+  }
+
+  /* ---------------- Export ---------------- */
+  document.getElementById('exportPdfBtn').addEventListener('click', () => window.print());
+
+  document.getElementById('exportExcelBtn').addEventListener('click', () => {
+    let csv = '﻿' + 'รหัสบ่อ,สถานะ,รายได้ (บาท),ต้นทุนรวม (บาท),กำไร/ขาดทุน (บาท),มาร์จิ้น (%)\n';
+    PONDS.forEach(p => {
+      const cost = costTotal(p.id);
+      const revenue = p.yieldKg * FARM_SETTINGS.sell_price;
+      const profit = revenue - cost;
+      const margin = revenue ? ((profit / revenue) * 100).toFixed(1) : '0';
+      csv += `${p.code},${STATUS_LABEL[p.status]},${revenue},${cost},${profit},${margin}\n`;
+    });
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'รายงานมนัสฟาร์ม.csv';
+    a.click();
+    URL.revokeObjectURL(url);
+  });
+
+  /* ---------------- Nav / sidebar ---------------- */
+  const sidebar = document.getElementById('sidebar');
+  const overlay = document.getElementById('overlay');
+  const menuToggle = document.getElementById('menuToggle');
+
+  function openSidebar() { document.body.classList.add('sidebar-open'); }
+  function closeSidebar() { document.body.classList.remove('sidebar-open'); }
+
+  menuToggle.addEventListener('click', () => {
+    document.body.classList.contains('sidebar-open') ? closeSidebar() : openSidebar();
+  });
+  overlay.addEventListener('click', closeSidebar);
+
+  document.querySelectorAll('.nav a').forEach(link => {
+    link.addEventListener('click', (e) => {
+      e.preventDefault();
+      document.querySelectorAll('.nav a').forEach(a => a.classList.remove('active'));
+      link.classList.add('active');
+
+      const pageKey = link.dataset.page;
+      document.querySelectorAll('.page').forEach(sec => sec.classList.remove('active'));
+      document.getElementById('page-' + pageKey).classList.add('active');
+
+      document.getElementById('pageTitle').textContent = link.textContent.trim();
+      if (window.innerWidth <= 768) closeSidebar();
+    });
+  });
+
+  /* ---------------- Init ---------------- */
+  function renderAll() {
+    renderPonds();
+    renderProduction();
+    renderCost();
+    renderReport();
+  }
+
+  /* ---------------- Auth ---------------- */
+  const authOverlay = document.getElementById('authOverlay');
+  const loginForm = document.getElementById('loginForm');
+  const loginError = document.getElementById('loginError');
+  const loginSubmitBtn = document.getElementById('loginSubmitBtn');
+
+  function showLogin() {
+    authOverlay.classList.add('active');
+  }
+
+  async function initAppAfterLogin(session) {
+    authOverlay.classList.remove('active');
+    document.getElementById('userEmailLabel').textContent = session.user.email;
+
+    await Promise.all([loadPonds(), loadCostItems(), loadFarmSettings()]);
+    applyFarmSettingsToUI();
+    renderAll();
+
+    // app.js exposes these once it's loaded — populate the daily-log page too.
+    if (typeof window.populatePondSelect === 'function') window.populatePondSelect();
+    if (typeof window.renderDailyLog === 'function') window.renderDailyLog();
+  }
+
+  loginForm.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const email = document.getElementById('loginEmail').value.trim();
+    const password = document.getElementById('loginPassword').value;
+
+    loginError.textContent = '';
+    loginSubmitBtn.disabled = true;
+    loginSubmitBtn.textContent = 'กำลังเข้าสู่ระบบ...';
+
+    const { error } = await supabaseClient.auth.signInWithPassword({ email, password });
+
+    loginSubmitBtn.disabled = false;
+    loginSubmitBtn.textContent = 'เข้าสู่ระบบ';
+
+    if (error) loginError.textContent = 'เข้าสู่ระบบไม่สำเร็จ: ' + error.message;
+    // on success, onAuthStateChange below handles showing the app
+  });
+
+  document.getElementById('logoutBtn').addEventListener('click', async () => {
+    await supabaseClient.auth.signOut();
+  });
+
+  supabaseClient.auth.onAuthStateChange((event, session) => {
+    if (session) {
+      initAppAfterLogin(session);
+    } else {
+      showLogin();
+    }
+  });
+</script>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+<script src="app.js"></script>
+</body>
+</html>
