@@ -7,7 +7,8 @@
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Mitr:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
   @font-face {
@@ -59,8 +60,8 @@
   html, body { height: 100%; }
 
   body {
-    font-family: "Mitr", "FC Mittraphap Rounded", "DB Adman X", "DB Heavent", "Sarabun", "Segoe UI", sans-serif;
-    font-weight: 700;
+    font-family: "Kanit", "Mitr", "FC Mittraphap Rounded", "DB Adman X", "DB Heavent", "Sarabun", "Segoe UI", sans-serif;
+    font-weight: 400;
     color: var(--text);
     background:
       radial-gradient(circle at 15% 10%, rgba(33,150,243,0.35), transparent 45%),
@@ -136,6 +137,7 @@
     color: var(--blue-light);
     text-decoration: none;
     font-size: 14px;
+    font-weight: 500;
     transition: background 0.15s, color 0.15s;
     cursor: pointer;
   }
@@ -344,6 +346,7 @@
     padding: 10px 18px;
     font-family: inherit;
     font-size: 14px;
+    font-weight: 600;
     cursor: pointer;
     transition: transform 0.1s, box-shadow 0.15s;
   }
@@ -640,13 +643,13 @@
       <div class="title">มนัสฟาร์ม</div>
     </div>
     <ul class="nav">
-      <li><a href="#" class="active" data-page="overview"><span class="icon">🏠</span> ภาพรวม</a></li>
-      <li><a href="#" data-page="dailylog"><span class="icon">📝</span> บันทึกรายวัน</a></li>
-      <li><a href="#" data-page="ponds"><span class="icon">🌊</span> บ่อเลี้ยง</a></li>
-      <li><a href="#" data-page="production"><span class="icon">🦐</span> ผลผลิต</a></li>
-      <li><a href="#" data-page="cost"><span class="icon">💰</span> คำนวณต้นทุน</a></li>
-      <li><a href="#" data-page="report"><span class="icon">📊</span> รายงาน</a></li>
-      <li><a href="#" data-page="settings"><span class="icon">⚙️</span> ตั้งค่า</a></li>
+      <li><a href="#" class="active" data-page="overview"><span class="icon"><i class="bi bi-house-door-fill"></i></span> ภาพรวม</a></li>
+      <li><a href="#" data-page="dailylog"><span class="icon"><i class="bi bi-journal-text"></i></span> บันทึกรายวัน</a></li>
+      <li><a href="#" data-page="ponds"><span class="icon"><i class="bi bi-water"></i></span> บ่อเลี้ยง</a></li>
+      <li><a href="#" data-page="production"><span class="icon"><i class="bi bi-graph-up-arrow"></i></span> ผลผลิต</a></li>
+      <li><a href="#" data-page="cost"><span class="icon"><i class="bi bi-cash-coin"></i></span> คำนวณต้นทุน</a></li>
+      <li><a href="#" data-page="report"><span class="icon"><i class="bi bi-bar-chart-line-fill"></i></span> รายงาน</a></li>
+      <li><a href="#" data-page="settings"><span class="icon"><i class="bi bi-gear-fill"></i></span> ตั้งค่า</a></li>
     </ul>
     <div class="sidebar-footer">© 2026 มนัสฟาร์ม</div>
   </aside>
@@ -680,7 +683,7 @@
 
           <div class="info-grid">
             <div class="info-card">
-              <div class="icon">📍</div>
+              <div class="icon"><i class="bi bi-geo-alt-fill"></i></div>
               <div class="body">
                 <div class="label">ที่อยู่ / ที่ตั้งฟาร์ม</div>
                 <div class="value" id="farmAddressEl">226 หมู่ 4 ตำบลไสไทย อำเภอเมือง จังหวัดกระบี่</div>
@@ -689,12 +692,12 @@
 
             <div class="stat-row">
               <div class="stat-card">
-                <div class="icon">🌊</div>
+                <div class="icon"><i class="bi bi-water"></i></div>
                 <div class="value" id="pondCountStat">10</div>
                 <div class="label">บ่อเลี้ยงกุ้ง</div>
               </div>
               <div class="stat-card">
-                <div class="icon">🦐</div>
+                <div class="icon"><i class="bi bi-tag-fill"></i></div>
                 <div class="value">กุลาดำ</div>
                 <div class="label">ชนิดกุ้งที่เลี้ยง</div>
               </div>
@@ -718,7 +721,7 @@
               <div class="section-sub">รายชื่อบ่อทั้งหมด สถานะ และคุณภาพน้ำล่าสุด</div>
             </div>
             <div class="btn-row">
-              <button class="btn btn-primary" id="addPondBtn">+ เพิ่มบ่อใหม่</button>
+              <button class="btn btn-primary" id="addPondBtn"><i class="bi bi-plus-circle-fill"></i> เพิ่มบ่อใหม่</button>
             </div>
           </div>
           <div class="panel">
@@ -785,7 +788,7 @@
               <div class="section-sub">ต้นทุนแยกตามหมวด ต้นทุนรวม และต้นทุนต่อกิโลกรัม</div>
             </div>
             <div class="btn-row">
-              <button class="btn btn-primary" id="addCostBtn">+ เพิ่มรายการค่าใช้จ่าย</button>
+              <button class="btn btn-primary" id="addCostBtn"><i class="bi bi-plus-circle-fill"></i> เพิ่มรายการค่าใช้จ่าย</button>
             </div>
           </div>
 
@@ -847,8 +850,8 @@
               <div class="section-sub">สรุปกำไร-ขาดทุน ภาพรวมทั้งฟาร์ม และแนวโน้ม</div>
             </div>
             <div class="btn-row">
-              <button class="btn btn-outline btn-sm" id="exportExcelBtn">⬇️ Export Excel (CSV)</button>
-              <button class="btn btn-primary btn-sm" id="exportPdfBtn">🖨️ Export PDF</button>
+              <button class="btn btn-outline btn-sm" id="exportExcelBtn"><i class="bi bi-download"></i> Export Excel (CSV)</button>
+              <button class="btn btn-primary btn-sm" id="exportPdfBtn"><i class="bi bi-printer-fill"></i> Export PDF</button>
             </div>
           </div>
 
