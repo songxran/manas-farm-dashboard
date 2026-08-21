@@ -1,7 +1,8 @@
 (function () {
-  // supabaseClient / PONDS / findPond come from the inline <script> in index.html,
-  // which loads before this file — classic <script> tags share the same global
-  // scope, so these top-level identifiers are visible here without any import.
+  // supabaseClient / PONDS / findPond / loadPonds / renderAll / renderAlerts come
+  // from the inline <script> in index.html, which loads before this file —
+  // classic <script> tags share the same global scope, so these top-level
+  // identifiers are visible here without any import.
 
   function formatDate(dateStr) {
     if (!dateStr) return '-';
@@ -19,13 +20,14 @@
   }
 
   /* ---------------- Pond dropdown ---------------- */
-  // Called after login + loadPonds() so PONDS reflects real data from Supabase.
+  // Called after login + loadPonds() so PONDS reflects real data from Supabase
+  // (and, for a staff account, only the ponds RLS actually lets them see).
   function populatePondSelect() {
     const select = document.getElementById('dlPond');
     if (!select) return;
 
     if (!PONDS || PONDS.length === 0) {
-      select.innerHTML = '<option value="">ยังไม่มีบ่อ กรุณาเพิ่มบ่อก่อน</option>';
+      select.innerHTML = '<option value="">ยังไม่มีบ่อที่เข้าถึงได้</option>';
       return;
     }
 
@@ -43,12 +45,12 @@
       .order('log_date', { ascending: false });
 
     if (error) {
-      tbody.innerHTML = `<tr class="empty-row"><td colspan="4">โหลดข้อมูลไม่สำเร็จ: ${error.message}</td></tr>`;
+      tbody.innerHTML = `<tr class="empty-row"><td colspan="8">โหลดข้อมูลไม่สำเร็จ: ${error.message}</td></tr>`;
       return;
     }
 
     if (data.length === 0) {
-      tbody.innerHTML = '<tr class="empty-row"><td colspan="4">ยังไม่มีข้อมูลบันทึก</td></tr>';
+      tbody.innerHTML = '<tr class="empty-row"><td colspan="8">ยังไม่มีข้อมูลบันทึก</td></tr>';
       return;
     }
 
@@ -59,7 +61,11 @@
         <tr>
           <td><strong>${pond ? pond.code : '-'}</strong></td>
           <td>${formatDate(entry.log_date)}</td>
-          <td class="num">${entry.value}</td>
+          <td class="num">${entry.feed_amount ?? '-'}</td>
+          <td class="num">${entry.ph ?? '-'}</td>
+          <td class="num">${entry.do_level ?? '-'}</td>
+          <td class="num">${entry.temp ?? '-'}</td>
+          <td class="num">${entry.salinity ?? '-'}</td>
           <td>${entry.note ? entry.note : '-'}</td>
         </tr>`;
       })
@@ -68,7 +74,11 @@
 
   function clearForm() {
     document.getElementById('dlDate').value = todayStr();
-    document.getElementById('dlValue').value = '';
+    document.getElementById('dlFeed').value = '';
+    document.getElementById('dlPh').value = '';
+    document.getElementById('dlDo').value = '';
+    document.getElementById('dlTemp').value = '';
+    document.getElementById('dlSalinity').value = '';
     document.getElementById('dlNote').value = '';
     populatePondSelect();
   }
@@ -76,13 +86,15 @@
   async function handleSave() {
     const pondSelect = document.getElementById('dlPond');
     const dateInput = document.getElementById('dlDate');
-    const valueInput = document.getElementById('dlValue');
-    const noteInput = document.getElementById('dlNote');
 
     const pondId = pondSelect.value;
     const date = dateInput.value.trim();
-    const rawValue = valueInput.value.trim();
-    const note = noteInput.value.trim();
+    const feed = document.getElementById('dlFeed').value.trim();
+    const ph = document.getElementById('dlPh').value.trim();
+    const doLevel = document.getElementById('dlDo').value.trim();
+    const temp = document.getElementById('dlTemp').value.trim();
+    const salinity = document.getElementById('dlSalinity').value.trim();
+    const note = document.getElementById('dlNote').value.trim();
 
     if (!pondId) {
       alert('กรุณาเลือกบ่อ');
@@ -92,21 +104,39 @@
       alert('กรุณาเลือกหรือกรอกวันที่');
       return;
     }
-    if (rawValue === '' || isNaN(parseFloat(rawValue))) {
-      alert('กรุณากรอกค่าตัวเลขที่ต้องการบันทึก');
+    if (feed === '' && ph === '' && doLevel === '' && temp === '' && salinity === '') {
+      alert('กรุณากรอกอย่างน้อยหนึ่งค่า (ปริมาณอาหาร หรือคุณภาพน้ำ)');
       return;
     }
 
     const entry = {
       pond_id: parseInt(pondId, 10),
       log_date: date,
-      value: parseFloat(rawValue),
+      feed_amount: feed !== '' ? parseFloat(feed) : null,
+      ph: ph !== '' ? parseFloat(ph) : null,
+      do_level: doLevel !== '' ? parseFloat(doLevel) : null,
+      temp: temp !== '' ? parseFloat(temp) : null,
+      salinity: salinity !== '' ? parseFloat(salinity) : null,
       note: note
     };
 
     const saveBtn = document.getElementById('dailyLogSaveBtn');
     saveBtn.disabled = true;
     const { error } = await supabaseClient.from('daily_logs').insert(entry);
+
+    // If any water-quality value was recorded, mirror it onto the pond's own
+    // ph/do_level/temp/salinity columns so the ponds page and the water-quality
+    // alert panel both reflect the latest reading.
+    const hasWaterReading = ph !== '' || doLevel !== '' || temp !== '' || salinity !== '';
+    if (!error && hasWaterReading) {
+      const pondUpdate = {};
+      if (ph !== '') pondUpdate.ph = parseFloat(ph);
+      if (doLevel !== '') pondUpdate.do_level = parseFloat(doLevel);
+      if (temp !== '') pondUpdate.temp = parseFloat(temp);
+      if (salinity !== '') pondUpdate.salinity = parseFloat(salinity);
+      await supabaseClient.from('ponds').update(pondUpdate).eq('id', parseInt(pondId, 10));
+    }
+
     saveBtn.disabled = false;
 
     if (error) {
@@ -116,6 +146,13 @@
 
     clearForm();
     await renderDailyLog();
+
+    // Refresh the shared pond cache + re-render so ponds/overview/alerts pick
+    // up the mirrored water-quality update immediately.
+    if (hasWaterReading && typeof loadPonds === 'function') {
+      await loadPonds();
+      if (typeof renderAll === 'function') renderAll();
+    }
   }
 
   /* ---------------- Farm map (Leaflet) ---------------- */

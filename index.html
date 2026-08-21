@@ -192,8 +192,28 @@
   }
 
   .topbar-left { display: flex; align-items: center; gap: 14px; }
-  .topbar-right { display: flex; align-items: center; gap: 12px; }
+  .topbar-right { display: flex; align-items: center; gap: 14px; }
   .user-email { font-size: 13px; color: var(--blue-light); }
+
+  .bell-wrap { position: relative; display: inline-flex; align-items: center; }
+  .bell-wrap i { color: #fff; font-size: 1.2rem; }
+  .bell-badge {
+    position: absolute;
+    top: -6px;
+    right: -8px;
+    background: var(--danger);
+    color: #fff;
+    font-size: 11px;
+    font-weight: bold;
+    min-width: 17px;
+    height: 17px;
+    border-radius: 999px;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    padding: 0 4px;
+  }
+  .bell-badge.show { display: flex; }
 
   .menu-toggle {
     display: none;
@@ -318,6 +338,28 @@
 
   footer.page-footer { text-align: center; margin-top: 44px; color: #9aacc9; font-size: 13px; }
 
+  /* ---------- Alerts (ภาพรวม) ---------- */
+  .alert-panel { max-width: 780px; margin: 0 auto 24px; }
+  .alert-card {
+    background: #fff5f5;
+    border: 1px solid #ffd6d6;
+    border-radius: 16px;
+    padding: 18px 20px;
+  }
+  .alert-card h3 { font-size: 18px; color: var(--danger); margin-bottom: 12px; text-align: left; display: flex; align-items: center; gap: 8px; }
+  .alert-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px 0;
+    border-top: 1px dashed #ffd6d6;
+    font-size: 14px;
+    text-align: left;
+  }
+  .alert-item:first-of-type { border-top: none; }
+  .alert-item .pond-code { font-weight: bold; color: var(--ink); }
+  .alert-item .issue { color: var(--danger); }
+
   /* ---------- Map (ภาพรวม) ---------- */
   .map-panel { max-width: 780px; margin: 24px auto 0; }
   .map-panel h3 { font-size: 22px; color: var(--ink); margin-bottom: 4px; text-align: left; }
@@ -430,6 +472,8 @@
   .badge-growing { background: #e3f2fd; color: #1565c0; }
   .badge-prep { background: #fff3e0; color: #ef6c00; }
   .badge-harvested { background: #ede7f6; color: #6a3fb5; }
+  .badge-admin { background: #ede7f6; color: #6a3fb5; }
+  .badge-user { background: #e3f2fd; color: #1565c0; }
 
   /* ---------- Bar chart ---------- */
   .bar-chart {
@@ -533,6 +577,8 @@
   .field input:focus, .field select:focus { outline: none; border-color: var(--blue-4); }
 
   .field-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0 14px; }
+  .field-hint { font-size: 12px; color: var(--muted); margin-top: -8px; margin-bottom: 14px; text-align: left; }
+  .field-divider { border-top: 1px dashed var(--line); margin: 18px 0 14px; padding-top: 4px; font-size: 13px; color: var(--muted); text-align: left; }
 
   .detail-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px 20px; text-align: left; margin-bottom: 6px; }
   .detail-grid .d-label { font-size: 13px; color: var(--muted); }
@@ -561,6 +607,9 @@
   body.logged-out .overlay,
   body.logged-out .main { display: none; }
 
+  /* Elements only for admin — toggled via JS adding/removing this class on <body>. */
+  body:not(.role-admin) .admin-only { display: none !important; }
+
   .auth-card {
     background: #fff;
     border-radius: 20px;
@@ -580,6 +629,7 @@
   .auth-card .field { margin-bottom: 14px; }
   .auth-card .btn-primary { width: 100%; justify-content: center; margin-top: 4px; }
   .auth-error { color: var(--danger); font-size: 13px; min-height: 1.2em; margin-top: 10px; text-align: left; }
+  .auth-note { color: var(--muted); font-size: 13px; margin-top: 16px; text-align: center; }
 
   /* ---------- Responsive ---------- */
   @media (max-width: 900px) {
@@ -663,6 +713,10 @@
         <span class="page-title" id="pageTitle">ภาพรวม</span>
       </div>
       <div class="topbar-right">
+        <div class="bell-wrap">
+          <i class="bi bi-bell-fill"></i>
+          <span class="bell-badge" id="bellBadge">0</span>
+        </div>
         <span class="user-email" id="userEmailLabel"></span>
         <button class="btn btn-outline btn-sm" id="logoutBtn">ออกจากระบบ</button>
       </div>
@@ -704,6 +758,13 @@
             </div>
           </div>
 
+          <div class="alert-panel" id="alertPanel" style="display:none;">
+            <div class="alert-card">
+              <h3><i class="bi bi-exclamation-triangle-fill"></i> บ่อที่ค่าน้ำผิดปกติ</h3>
+              <div id="alertList"></div>
+            </div>
+          </div>
+
           <div class="map-panel">
             <h3>ตำแหน่งฟาร์ม</h3>
             <div class="map-hint">คลิกบนแผนที่เพื่อย้ายตำแหน่งหมุด</div>
@@ -720,7 +781,7 @@
               <h2>บ่อเลี้ยง (Pond Management)</h2>
               <div class="section-sub">รายชื่อบ่อทั้งหมด สถานะ และคุณภาพน้ำล่าสุด</div>
             </div>
-            <div class="btn-row">
+            <div class="btn-row admin-only">
               <button class="btn btn-primary" id="addPondBtn"><i class="bi bi-plus-circle-fill"></i> เพิ่มบ่อใหม่</button>
             </div>
           </div>
@@ -734,9 +795,8 @@
                     <th class="num">ขนาด (ไร่)</th>
                     <th class="num">ความลึก (ม.)</th>
                     <th>ชนิดที่เลี้ยง</th>
-                    <th>วันที่ปล่อยลูกพันธุ์</th>
-                    <th class="num">อายุการเลี้ยง</th>
-                    <th>คุณภาพน้ำ (pH / DO / อุณหภูมิ / ความเค็ม)</th>
+                    <th>พนักงานที่รับผิดชอบ</th>
+                    <th>คุณภาพน้ำล่าสุด (pH / DO / อุณหภูมิ / ความเค็ม)</th>
                     <th>จัดการ</th>
                   </tr>
                 </thead>
@@ -750,13 +810,13 @@
         <section class="page" id="page-production">
           <div class="section-head">
             <div>
-              <h2>ผลผลิต (Production / Yield)</h2>
-              <div class="section-sub">ผลผลิต อัตราการรอด และ FCR ของแต่ละบ่อ</div>
+              <h2>ผลผลิต / รุ่นการเลี้ยง (Production Cycles)</h2>
+              <div class="section-sub">ประวัติทุกรุ่นการเลี้ยงของแต่ละบ่อ</div>
             </div>
           </div>
 
           <div class="panel">
-            <h3>เปรียบเทียบผลผลิตแต่ละบ่อ (กก.)</h3>
+            <h3>เปรียบเทียบผลผลิตแต่ละรุ่น (กก.)</h3>
             <div class="bar-chart" id="yieldChart"></div>
           </div>
 
@@ -766,6 +826,9 @@
                 <thead>
                   <tr>
                     <th>รหัสบ่อ</th>
+                    <th class="num">รุ่นที่</th>
+                    <th>วันที่ปล่อย</th>
+                    <th>สถานะรุ่น</th>
                     <th class="num">ผลผลิต (กก.)</th>
                     <th class="num">อัตราการรอด (%)</th>
                     <th class="num">FCR</th>
@@ -830,6 +893,7 @@
                 <thead>
                   <tr>
                     <th>รหัสบ่อ</th>
+                    <th>รุ่นที่</th>
                     <th>หมวดหมู่</th>
                     <th>รายละเอียด</th>
                     <th class="num">จำนวนเงิน (บาท)</th>
@@ -847,7 +911,7 @@
           <div class="section-head">
             <div>
               <h2>รายงาน (Report)</h2>
-              <div class="section-sub">สรุปกำไร-ขาดทุน ภาพรวมทั้งฟาร์ม และแนวโน้ม</div>
+              <div class="section-sub">สรุปกำไร-ขาดทุนต่อรุ่นการเลี้ยง ภาพรวมทั้งฟาร์ม และแนวโน้ม</div>
             </div>
             <div class="btn-row">
               <button class="btn btn-outline btn-sm" id="exportExcelBtn"><i class="bi bi-download"></i> Export Excel (CSV)</button>
@@ -858,12 +922,13 @@
           <div class="summary-row" id="summaryRow"></div>
 
           <div class="panel">
-            <h3>สรุปกำไร-ขาดทุนต่อบ่อ <span style="font-weight:normal;color:var(--muted);font-size:13px;">(ราคาขาย <span id="sellPriceHint">180</span> บาท/กก.)</span></h3>
+            <h3>สรุปกำไร-ขาดทุนต่อรุ่น <span style="font-weight:normal;color:var(--muted);font-size:13px;">(ราคาขาย <span id="sellPriceHint">180</span> บาท/กก.)</span></h3>
             <div class="table-wrap">
               <table id="reportTable">
                 <thead>
                   <tr>
                     <th>รหัสบ่อ</th>
+                    <th class="num">รุ่นที่</th>
                     <th>สถานะ</th>
                     <th class="num">รายได้ (บาท)</th>
                     <th class="num">ต้นทุนรวม (บาท)</th>
@@ -891,8 +956,8 @@
         <section class="page" id="page-dailylog">
           <div class="section-head">
             <div>
-              <h2>บันทึกรายวัน (Daily Log)</h2>
-              <div class="section-sub">บันทึกค่าที่ต้องการติดตามรายวัน เช่น น้ำหนักตัวกุ้ง หรือค่าที่วัดได้อื่นๆ</div>
+              <h2>บันทึกรายวัน (การให้อาหาร + คุณภาพน้ำ)</h2>
+              <div class="section-sub">บันทึกปริมาณอาหารและ/หรือคุณภาพน้ำประจำวันของแต่ละบ่อ</div>
             </div>
           </div>
 
@@ -907,10 +972,34 @@
                 <input type="date" id="dlDate">
               </div>
             </div>
+
             <div class="field">
-              <label>น้ำหนักตัว / ค่าที่บันทึก</label>
-              <input type="number" id="dlValue" step="0.01" placeholder="0">
+              <label>ปริมาณอาหาร (กก.)</label>
+              <input type="number" id="dlFeed" step="0.01" placeholder="0">
             </div>
+
+            <div class="field-divider">คุณภาพน้ำ (กรอกเฉพาะค่าที่วัดได้ ไม่บังคับทุกช่อง)</div>
+            <div class="field-grid">
+              <div class="field">
+                <label>pH</label>
+                <input type="number" id="dlPh" step="0.1">
+              </div>
+              <div class="field">
+                <label>DO (mg/L)</label>
+                <input type="number" id="dlDo" step="0.1">
+              </div>
+            </div>
+            <div class="field-grid">
+              <div class="field">
+                <label>อุณหภูมิ (°C)</label>
+                <input type="number" id="dlTemp" step="0.1">
+              </div>
+              <div class="field">
+                <label>ความเค็ม (ppt)</label>
+                <input type="number" id="dlSalinity" step="0.1">
+              </div>
+            </div>
+
             <div class="field">
               <label>บันทึกเพิ่มเติม</label>
               <input type="text" id="dlNote" placeholder="รายละเอียดเพิ่มเติม (ถ้ามี)">
@@ -928,7 +1017,11 @@
                   <tr>
                     <th>บ่อ</th>
                     <th>วันที่</th>
-                    <th class="num">ค่าที่บันทึก</th>
+                    <th class="num">อาหาร (กก.)</th>
+                    <th class="num">pH</th>
+                    <th class="num">DO</th>
+                    <th class="num">อุณหภูมิ</th>
+                    <th class="num">ความเค็ม</th>
                     <th>บันทึกเพิ่มเติม</th>
                   </tr>
                 </thead>
@@ -952,6 +1045,22 @@
               <div><div class="d-label">เจ้าของฟาร์ม</div><div class="d-value" id="stOwnerName">คุณอัญมณี</div></div>
               <div><div class="d-label">ที่อยู่</div><div class="d-value" id="stAddress">226 หมู่ 4 ตำบลไสไทย อำเภอเมือง จังหวัดกระบี่</div></div>
               <div><div class="d-label">ราคาขายที่ใช้คำนวณ</div><div class="d-value" id="stSellPrice">180 บาท/กก.</div></div>
+            </div>
+          </div>
+
+          <div class="panel admin-only">
+            <h3><i class="bi bi-people-fill"></i> จัดการผู้ใช้งาน</h3>
+            <div class="table-wrap">
+              <table id="usersTable">
+                <thead>
+                  <tr>
+                    <th>ชื่อ</th>
+                    <th>อีเมล</th>
+                    <th>สิทธิ์</th>
+                  </tr>
+                </thead>
+                <tbody></tbody>
+              </table>
             </div>
           </div>
         </section>
@@ -1006,8 +1115,10 @@
         </div>
       </div>
       <div class="field">
-        <label>วันที่ปล่อยลูกพันธุ์</label>
-        <input type="date" id="pfRelease">
+        <label>พนักงานที่รับผิดชอบ</label>
+        <select id="pfAssignedUser">
+          <option value="">— ไม่ระบุ (แอดมินดูแลเอง) —</option>
+        </select>
       </div>
       <div class="field-grid">
         <div class="field">
@@ -1036,7 +1147,27 @@
     </div>
   </div>
 
-  <!-- Edit production modal -->
+  <!-- Start new production cycle modal -->
+  <div class="modal-overlay" id="startCycleModal">
+    <div class="modal-box">
+      <h3 id="startCycleTitle">เริ่มรุ่นการเลี้ยงใหม่</h3>
+      <input type="hidden" id="scPondId">
+      <div class="field">
+        <label>วันที่ปล่อยลูกพันธุ์</label>
+        <input type="date" id="scRelease">
+      </div>
+      <div class="field">
+        <label>ชนิดที่เลี้ยง</label>
+        <input type="text" id="scSpecies" placeholder="กุ้งกุลาดำ">
+      </div>
+      <div class="btn-row">
+        <button class="btn btn-primary" id="startCycleSaveBtn">เริ่มรุ่นใหม่</button>
+        <button class="btn btn-outline" id="startCycleCancelBtn">ยกเลิก</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Edit production cycle modal -->
   <div class="modal-overlay" id="productionModal">
     <div class="modal-box">
       <h3 id="productionFormTitle">แก้ไขข้อมูลผลผลิต</h3>
@@ -1082,6 +1213,10 @@
         <select id="costPondSelect"></select>
       </div>
       <div class="field">
+        <label>รุ่นที่</label>
+        <select id="costCycleSelect"></select>
+      </div>
+      <div class="field">
         <label>หมวดหมู่</label>
         <select id="costCategorySelect">
           <option value="seed">ค่าลูกพันธุ์</option>
@@ -1117,11 +1252,18 @@
   const CATS = { seed: 'ค่าลูกพันธุ์', feed: 'ค่าอาหาร', utility: 'ค่าไฟ/น้ำมัน', chem: 'ค่ายา/เคมีภัณฑ์', labor: 'ค่าแรงงาน' };
   const STATUS_LABEL = { empty: 'ว่าง', growing: 'กำลังเลี้ยง', prep: 'เตรียมบ่อ', harvested: 'เก็บเกี่ยวแล้ว' };
   const STATUS_BADGE = { empty: 'badge-empty', growing: 'badge-growing', prep: 'badge-prep', harvested: 'badge-harvested' };
+  const ROLE_LABEL = { admin: 'แอดมิน', user: 'พนักงาน' };
 
-  // In-memory cache mirroring the Supabase tables — populated by loadPonds()/
-  // loadCostItems()/loadFarmSettings() after login, refreshed after every mutation.
+  // In-memory cache mirroring the Supabase tables — populated after login,
+  // refreshed after every mutation. RLS on the server already scopes which
+  // rows a non-admin actually receives, so PONDS/CYCLES/COST_ITEMS here only
+  // ever contain what the logged-in user is allowed to see.
   let PONDS = [];
+  let CYCLES = [];
   let COST_ITEMS = [];
+  let PROFILES = [];
+  let CURRENT_USER_ID = null;
+  let CURRENT_USER_ROLE = 'user';
   let FARM_SETTINGS = {
     farm_name: 'มนัสฟาร์ม',
     owner_name: 'คุณอัญมณี',
@@ -1130,31 +1272,47 @@
   };
 
   /* ---------------- DB <-> JS field mapping ---------------- */
-  // ponds.do_level -> p.do, ponds.release_date -> p.release, ponds.harvest_date -> p.harvest,
-  // ponds.yield_kg -> p.yieldKg (DB uses snake_case; the rest of this file was written against
-  // these JS-shaped names, so the mapping lives here instead of touching every render function).
   function pondFromDb(row) {
     return {
       id: row.id, code: row.code, status: row.status, size: row.size, depth: row.depth,
-      species: row.species, release: row.release_date, ph: row.ph, do: row.do_level,
-      temp: row.temp, salinity: row.salinity, yieldKg: row.yield_kg, survival: row.survival,
-      fcr: row.fcr, harvest: row.harvest_date, grade: row.grade,
+      species: row.species, ph: row.ph, do: row.do_level, temp: row.temp, salinity: row.salinity,
+      assignedUserId: row.assigned_user_id,
+      // legacy single-cycle fields kept for reference only — the app no longer
+      // reads/writes these; production data lives in production_cycles now.
+      yieldKg: row.yield_kg, harvest: row.harvest_date,
     };
   }
   function pondToDb(p) {
     return {
       code: p.code, status: p.status, size: p.size, depth: p.depth, species: p.species,
-      release_date: p.release, ph: p.ph, do_level: p.do, temp: p.temp, salinity: p.salinity,
+      ph: p.ph, do_level: p.do, temp: p.temp, salinity: p.salinity,
+      assigned_user_id: p.assignedUserId || null,
+    };
+  }
+  function cycleFromDb(row) {
+    return {
+      id: row.id, pondId: row.pond_id, cycleNo: row.cycle_no, release: row.release_date,
+      species: row.species, status: row.status, harvest: row.harvest_date,
+      yieldKg: row.yield_kg, survival: row.survival, fcr: row.fcr, grade: row.grade,
     };
   }
   function costItemFromDb(row) {
-    return { id: row.id, pondId: row.pond_id, category: row.category, desc: row.description, amount: row.amount, createdAt: row.created_at };
+    return { id: row.id, pondId: row.pond_id, cycleId: row.cycle_id, category: row.category, desc: row.description, amount: row.amount, createdAt: row.created_at };
+  }
+  function profileFromDb(row) {
+    return { id: row.id, role: row.role, fullName: row.full_name, email: row.email };
   }
 
   async function loadPonds() {
     const { data, error } = await supabaseClient.from('ponds').select('*').order('id');
     if (error) { alert('โหลดข้อมูลบ่อไม่สำเร็จ: ' + error.message); return; }
     PONDS = data.map(pondFromDb);
+  }
+
+  async function loadCycles() {
+    const { data, error } = await supabaseClient.from('production_cycles').select('*').order('pond_id').order('cycle_no');
+    if (error) { alert('โหลดข้อมูลรุ่นการเลี้ยงไม่สำเร็จ: ' + error.message); return; }
+    CYCLES = data.map(cycleFromDb);
   }
 
   async function loadCostItems() {
@@ -1169,6 +1327,19 @@
     FARM_SETTINGS = { farm_name: data.farm_name, owner_name: data.owner_name, address: data.address, sell_price: data.sell_price };
   }
 
+  async function loadCurrentUserProfile() {
+    const { data, error } = await supabaseClient.from('profiles').select('*').eq('id', CURRENT_USER_ID).maybeSingle();
+    if (error || !data) { CURRENT_USER_ROLE = 'user'; return; }
+    CURRENT_USER_ROLE = data.role;
+  }
+
+  async function loadProfiles() {
+    if (CURRENT_USER_ROLE !== 'admin') { PROFILES = []; return; }
+    const { data, error } = await supabaseClient.from('profiles').select('*').order('email');
+    if (error) { PROFILES = []; return; }
+    PROFILES = data.map(profileFromDb);
+  }
+
   function applyFarmSettingsToUI() {
     document.getElementById('farmNameEl').textContent = FARM_SETTINGS.farm_name;
     document.getElementById('ownerNameEl').textContent = FARM_SETTINGS.owner_name;
@@ -1181,7 +1352,7 @@
   }
 
   // Monthly farm-wide trend, derived from real data (last 6 calendar months):
-  // yield is summed by each pond's harvest month, cost by when each cost item was logged.
+  // yield is summed by each cycle's harvest month, cost by when each cost item was logged.
   function monthKeyOf(dateStr) {
     const d = new Date(dateStr);
     return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0');
@@ -1201,10 +1372,10 @@
     const yieldByMonth = {}, costByMonth = {};
     months.forEach(m => { yieldByMonth[m.key] = 0; costByMonth[m.key] = 0; });
 
-    PONDS.forEach(p => {
-      if (!p.harvest) return;
-      const k = monthKeyOf(p.harvest);
-      if (k in yieldByMonth) yieldByMonth[k] += p.yieldKg || 0;
+    CYCLES.forEach(c => {
+      if (!c.harvest) return;
+      const k = monthKeyOf(c.harvest);
+      if (k in yieldByMonth) yieldByMonth[k] += c.yieldKg || 0;
     });
 
     COST_ITEMS.forEach(item => {
@@ -1234,13 +1405,54 @@
   }
 
   function findPond(id) { return PONDS.find(x => x.id === id); }
+  function findCycle(id) { return CYCLES.find(x => x.id === id); }
+  function cyclesForPond(pondId) { return CYCLES.filter(c => c.pondId === pondId); }
+  function activeCycleForPond(pondId) { return CYCLES.find(c => c.pondId === pondId && c.status === 'growing'); }
 
   function costTotal(pondId) {
     return COST_ITEMS.filter(i => i.pondId === pondId).reduce((sum, i) => sum + i.amount, 0);
   }
-
+  function costTotalForCycle(cycleId) {
+    return COST_ITEMS.filter(i => i.cycleId === cycleId).reduce((sum, i) => sum + i.amount, 0);
+  }
   function catTotalForPond(pondId, cat) {
     return COST_ITEMS.filter(i => i.pondId === pondId && i.category === cat).reduce((sum, i) => sum + i.amount, 0);
+  }
+
+  /* ---------------- Water quality alerts ---------------- */
+  function computeWaterAlerts() {
+    const alerts = [];
+    PONDS.forEach(p => {
+      if (p.ph !== null && p.ph !== undefined && p.ph < 7) {
+        alerts.push({ pond: p, issue: `pH ต่ำผิดปกติ (${p.ph})` });
+      }
+      if (p.do !== null && p.do !== undefined && p.do < 4) {
+        alerts.push({ pond: p, issue: `ออกซิเจน (DO) ต่ำผิดปกติ (${p.do} mg/L)` });
+      }
+    });
+    return alerts;
+  }
+
+  function renderAlerts() {
+    const alerts = computeWaterAlerts();
+    const panel = document.getElementById('alertPanel');
+    const bellBadge = document.getElementById('bellBadge');
+
+    if (alerts.length === 0) {
+      panel.style.display = 'none';
+      bellBadge.classList.remove('show');
+      return;
+    }
+
+    panel.style.display = 'block';
+    bellBadge.textContent = alerts.length;
+    bellBadge.classList.add('show');
+
+    document.getElementById('alertList').innerHTML = alerts.map(a => `
+      <div class="alert-item">
+        <span class="pond-code">${a.pond.code}</span>
+        <span class="issue">${a.issue}</span>
+      </div>`).join('');
   }
 
   /* ---------------- Render: ponds ---------------- */
@@ -1249,13 +1461,18 @@
 
     const tbody = document.querySelector('#pondsTable tbody');
     if (PONDS.length === 0) {
-      tbody.innerHTML = `<tr class="empty-row"><td colspan="9">ยังไม่มีข้อมูลบ่อ</td></tr>`;
+      tbody.innerHTML = `<tr class="empty-row"><td colspan="8">ยังไม่มีข้อมูลบ่อ</td></tr>`;
       return;
     }
     tbody.innerHTML = PONDS.map(p => {
       const water = (p.ph !== null && p.ph !== undefined)
         ? `${p.ph} / ${p.do} mg/L / ${p.temp}°C / ${p.salinity} ppt`
         : '<span style="color:var(--muted)">- ไม่มีการบันทึก -</span>';
+      const assignee = p.assignedUserId ? (PROFILES.find(u => u.id === p.assignedUserId)?.fullName || PROFILES.find(u => u.id === p.assignedUserId)?.email || 'พนักงาน') : '<span style="color:var(--muted)">- ไม่ระบุ -</span>';
+      const manageBtns = CURRENT_USER_ROLE === 'admin'
+        ? `<button class="btn btn-outline btn-sm" onclick="openPondForm(${p.id})">แก้ไข</button>
+           <button class="btn btn-danger btn-sm" onclick="deletePond(${p.id})">ลบ</button>`
+        : '';
       return `
         <tr>
           <td><strong>${p.code}</strong></td>
@@ -1263,14 +1480,12 @@
           <td class="num">${p.size}</td>
           <td class="num">${p.depth}</td>
           <td>${p.species}</td>
-          <td>${p.release ? new Date(p.release).toLocaleDateString('th-TH', { year: 'numeric', month: 'short', day: 'numeric' }) : '-'}</td>
-          <td class="num">${ageLabel(p.release)}</td>
+          <td>${assignee}</td>
           <td>${water}</td>
           <td>
             <div class="row-actions">
               <button class="btn btn-outline btn-sm" onclick="openPondDetail(${p.id})">ดู</button>
-              <button class="btn btn-outline btn-sm" onclick="openPondForm(${p.id})">แก้ไข</button>
-              <button class="btn btn-danger btn-sm" onclick="deletePond(${p.id})">ลบ</button>
+              ${manageBtns}
             </div>
           </td>
         </tr>`;
@@ -1281,17 +1496,19 @@
     const p = findPond(id);
     document.getElementById('pondModalTitle').textContent = `รายละเอียด ${p.code}`;
     const total = costTotal(p.id);
+    const active = activeCycleForPond(p.id);
+    const assignee = p.assignedUserId ? (PROFILES.find(u => u.id === p.assignedUserId)?.fullName || PROFILES.find(u => u.id === p.assignedUserId)?.email || 'พนักงาน') : '-';
     document.getElementById('pondModalBody').innerHTML = `
       <div><div class="d-label">สถานะ</div><div class="d-value">${STATUS_LABEL[p.status]}</div></div>
       <div><div class="d-label">ชนิดที่เลี้ยง</div><div class="d-value">${p.species}</div></div>
       <div><div class="d-label">ขนาดบ่อ</div><div class="d-value">${p.size} ไร่</div></div>
       <div><div class="d-label">ความลึก</div><div class="d-value">${p.depth} ม.</div></div>
-      <div><div class="d-label">วันที่ปล่อยลูกพันธุ์</div><div class="d-value">${p.release ? p.release : '-'}</div></div>
-      <div><div class="d-label">อายุการเลี้ยง</div><div class="d-value">${ageLabel(p.release)}</div></div>
+      <div><div class="d-label">พนักงานที่รับผิดชอบ</div><div class="d-value">${assignee}</div></div>
+      <div><div class="d-label">รุ่นที่กำลังเลี้ยง</div><div class="d-value">${active ? 'รุ่นที่ ' + active.cycleNo : '-'}</div></div>
       <div><div class="d-label">pH / DO</div><div class="d-value">${p.ph ?? '-'} / ${p.do ?? '-'}</div></div>
       <div><div class="d-label">อุณหภูมิ / ความเค็ม</div><div class="d-value">${p.temp ?? '-'}°C / ${p.salinity ?? '-'} ppt</div></div>
-      <div><div class="d-label">ผลผลิต</div><div class="d-value">${p.yieldKg ? fmt(p.yieldKg) + ' กก.' : '-'}</div></div>
-      <div><div class="d-label">ต้นทุนรวม</div><div class="d-value">${fmt(total)} บาท</div></div>
+      <div><div class="d-label">ผลผลิตรุ่นปัจจุบัน</div><div class="d-value">${active && active.yieldKg ? fmt(active.yieldKg) + ' กก.' : '-'}</div></div>
+      <div><div class="d-label">ต้นทุนรวมทั้งหมด</div><div class="d-value">${fmt(total)} บาท</div></div>
     `;
     document.getElementById('pondModal').classList.add('active');
   }
@@ -1299,8 +1516,16 @@
     document.getElementById('pondModal').classList.remove('active');
   });
 
-  /* ---------------- Pond add / edit form ---------------- */
+  /* ---------------- Pond add / edit form (admin only) ---------------- */
   const pondFormModal = document.getElementById('pondFormModal');
+
+  function populateAssignedUserSelect(selectedId) {
+    const sel = document.getElementById('pfAssignedUser');
+    const options = ['<option value="">— ไม่ระบุ (แอดมินดูแลเอง) —</option>']
+      .concat(PROFILES.filter(u => u.role === 'user').map(u => `<option value="${u.id}">${u.fullName || u.email}</option>`));
+    sel.innerHTML = options.join('');
+    sel.value = selectedId || '';
+  }
 
   function openPondForm(id) {
     const isEdit = id !== null;
@@ -1313,11 +1538,11 @@
     document.getElementById('pfSpecies').value = p ? (p.species === '-' ? '' : p.species) : '';
     document.getElementById('pfSize').value = p ? p.size : '';
     document.getElementById('pfDepth').value = p ? p.depth : '';
-    document.getElementById('pfRelease').value = p && p.release ? p.release : '';
     document.getElementById('pfPh').value = p && p.ph !== null ? p.ph : '';
     document.getElementById('pfDo').value = p && p.do !== null ? p.do : '';
     document.getElementById('pfTemp').value = p && p.temp !== null ? p.temp : '';
     document.getElementById('pfSalinity').value = p && p.salinity !== null ? p.salinity : '';
+    populateAssignedUserSelect(p ? p.assignedUserId : null);
 
     pondFormModal.classList.add('active');
   }
@@ -1336,11 +1561,11 @@
       species: document.getElementById('pfSpecies').value.trim() || '-',
       size: parseFloat(document.getElementById('pfSize').value) || 0,
       depth: parseFloat(document.getElementById('pfDepth').value) || 0,
-      release: document.getElementById('pfRelease').value || null,
       ph: document.getElementById('pfPh').value !== '' ? parseFloat(document.getElementById('pfPh').value) : null,
       do: document.getElementById('pfDo').value !== '' ? parseFloat(document.getElementById('pfDo').value) : null,
       temp: document.getElementById('pfTemp').value !== '' ? parseFloat(document.getElementById('pfTemp').value) : null,
       salinity: document.getElementById('pfSalinity').value !== '' ? parseFloat(document.getElementById('pfSalinity').value) : null,
+      assignedUserId: document.getElementById('pfAssignedUser').value || null,
     });
 
     const saveBtn = document.getElementById('pondFormSaveBtn');
@@ -1361,71 +1586,152 @@
     const p = findPond(id);
     if (!confirm(`ต้องการลบ ${p.code} ใช่หรือไม่? ข้อมูลต้นทุนที่เกี่ยวข้องจะถูกลบด้วย`)) return;
     const { error } = await supabaseClient.from('ponds').delete().eq('id', id);
-    if (error) { alert('ลบไม่สำเร็จ: ' + error.message); return; }
-    await Promise.all([loadPonds(), loadCostItems()]);
+    if (error) {
+      if (error.message && error.message.toLowerCase().includes('foreign key')) {
+        alert('ลบไม่ได้ เพราะบ่อนี้มีประวัติการเลี้ยง (รุ่นการเลี้ยง) อยู่ — เปลี่ยนสถานะเป็น "ว่าง" แทนการลบ');
+      } else {
+        alert('ลบไม่สำเร็จ: ' + error.message);
+      }
+      return;
+    }
+    await Promise.all([loadPonds(), loadCostItems(), loadCycles()]);
     renderAll();
   }
 
-  /* ---------------- Render: production ---------------- */
+  /* ---------------- Render: production cycles ---------------- */
   function renderProduction() {
     const chart = document.getElementById('yieldChart');
-    if (PONDS.length === 0) {
+    if (CYCLES.length === 0) {
       chart.innerHTML = '';
     } else {
-      const max = Math.max(...PONDS.map(p => p.yieldKg), 1);
-      chart.innerHTML = PONDS.map(p => `
+      const max = Math.max(...CYCLES.map(c => c.yieldKg || 0), 1);
+      chart.innerHTML = CYCLES.map(c => {
+        const pond = findPond(c.pondId);
+        return `
         <div class="bar-col">
-          <div class="bar-val">${p.yieldKg ? fmt(p.yieldKg) : '-'}</div>
-          <div class="bar" style="height:${p.yieldKg ? Math.max((p.yieldKg / max) * 100, 3) : 2}%"></div>
-          <div class="bar-label">${p.code.replace('บ่อ ', '#')}</div>
-        </div>`).join('');
+          <div class="bar-val">${c.yieldKg ? fmt(c.yieldKg) : '-'}</div>
+          <div class="bar" style="height:${c.yieldKg ? Math.max((c.yieldKg / max) * 100, 3) : 2}%"></div>
+          <div class="bar-label">${pond ? pond.code.replace('บ่อ ', '#') : '?'}-${c.cycleNo}</div>
+        </div>`;
+      }).join('');
     }
 
     const tbody = document.querySelector('#productionTable tbody');
-    if (PONDS.length === 0) {
-      tbody.innerHTML = `<tr class="empty-row"><td colspan="7">ยังไม่มีข้อมูลผลผลิต</td></tr>`;
-      return;
+    if (CYCLES.length === 0) {
+      tbody.innerHTML = `<tr class="empty-row"><td colspan="10">ยังไม่มีข้อมูลรุ่นการเลี้ยง — เริ่มรุ่นใหม่ได้จากหน้าบ่อเลี้ยง</td></tr>`;
+    } else {
+      tbody.innerHTML = CYCLES.map(c => {
+        const pond = findPond(c.pondId);
+        return `
+        <tr>
+          <td><strong>${pond ? pond.code : '-'}</strong></td>
+          <td class="num">${c.cycleNo}</td>
+          <td>${c.release || '-'}</td>
+          <td><span class="badge ${c.status === 'growing' ? 'badge-growing' : 'badge-harvested'}">${c.status === 'growing' ? 'กำลังเลี้ยง' : 'เก็บเกี่ยวแล้ว'}</span></td>
+          <td class="num">${c.yieldKg ? fmt(c.yieldKg) : '-'}</td>
+          <td class="num">${c.survival ?? '-'}</td>
+          <td class="num">${c.fcr ?? '-'}</td>
+          <td>${c.harvest || '-'}</td>
+          <td>${c.grade || '-'}</td>
+          <td><button class="btn btn-outline btn-sm" onclick="openProductionForm(${c.id})">แก้ไข</button></td>
+        </tr>`;
+      }).join('');
     }
-    tbody.innerHTML = PONDS.map(p => `
-      <tr>
-        <td><strong>${p.code}</strong></td>
-        <td class="num">${p.yieldKg ? fmt(p.yieldKg) : '-'}</td>
-        <td class="num">${p.survival ?? '-'}</td>
-        <td class="num">${p.fcr ?? '-'}</td>
-        <td>${p.harvest ? p.harvest : (p.yieldKg ? 'ยังไม่เก็บเกี่ยว (ประมาณการ)' : '-')}</td>
-        <td>${p.grade}</td>
-        <td><button class="btn btn-outline btn-sm" onclick="openProductionForm(${p.id})">แก้ไข</button></td>
-      </tr>`).join('');
+
+    renderStartCycleButtons();
   }
 
+  // Ponds with no currently-growing cycle get a "+ เริ่มรุ่นใหม่" button, shown
+  // as a row of chips above the production table's panel isn't in the markup —
+  // simplest correct place is inline in the ponds table detail modal / here as
+  // a dedicated small panel, added dynamically to avoid empty state clutter.
+  function renderStartCycleButtons() {
+    let panel = document.getElementById('startCyclePanel');
+    const eligible = PONDS.filter(p => !activeCycleForPond(p.id));
+    if (eligible.length === 0) {
+      if (panel) panel.remove();
+      return;
+    }
+    if (!panel) {
+      panel = document.createElement('div');
+      panel.className = 'panel';
+      panel.id = 'startCyclePanel';
+      const table = document.getElementById('productionTable').closest('.panel');
+      table.parentNode.insertBefore(panel, table);
+    }
+    panel.innerHTML = `<h3>เริ่มรุ่นใหม่</h3><div class="btn-row">${eligible.map(p =>
+      `<button class="btn btn-outline btn-sm" onclick="openStartCycleForm(${p.id})">+ ${p.code}</button>`
+    ).join('')}</div>`;
+  }
+
+  const startCycleModal = document.getElementById('startCycleModal');
+  function openStartCycleForm(pondId) {
+    const p = findPond(pondId);
+    document.getElementById('startCycleTitle').textContent = `เริ่มรุ่นใหม่ — ${p.code}`;
+    document.getElementById('scPondId').value = pondId;
+    const d = new Date();
+    document.getElementById('scRelease').value = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+    document.getElementById('scSpecies').value = p.species === '-' ? '' : p.species;
+    startCycleModal.classList.add('active');
+  }
+  document.getElementById('startCycleCancelBtn').addEventListener('click', () => startCycleModal.classList.remove('active'));
+  document.getElementById('startCycleSaveBtn').addEventListener('click', async () => {
+    const pondId = parseInt(document.getElementById('scPondId').value, 10);
+    const release = document.getElementById('scRelease').value || null;
+    const species = document.getElementById('scSpecies').value.trim() || '-';
+    const existing = cyclesForPond(pondId);
+    const nextNo = existing.length ? Math.max(...existing.map(c => c.cycleNo)) + 1 : 1;
+
+    const { error } = await supabaseClient.from('production_cycles').insert({
+      pond_id: pondId, cycle_no: nextNo, release_date: release, species, status: 'growing',
+    });
+    if (error) { alert('เริ่มรุ่นใหม่ไม่สำเร็จ: ' + error.message); return; }
+
+    // keep the pond's own status roughly in sync for the badge on the ponds page
+    await supabaseClient.from('ponds').update({ status: 'growing' }).eq('id', pondId);
+
+    startCycleModal.classList.remove('active');
+    await Promise.all([loadCycles(), loadPonds()]);
+    renderAll();
+  });
+
   const productionModal = document.getElementById('productionModal');
-  function openProductionForm(id) {
-    const p = findPond(id);
-    document.getElementById('productionFormTitle').textContent = `แก้ไขผลผลิต — ${p.code}`;
-    document.getElementById('pdFormId').value = id;
-    document.getElementById('pdYield').value = p.yieldKg || '';
-    document.getElementById('pdSurvival').value = p.survival ?? '';
-    document.getElementById('pdFcr').value = p.fcr ?? '';
-    document.getElementById('pdHarvest').value = p.harvest || '';
-    document.getElementById('pdGrade').value = p.grade === '-' ? '' : p.grade;
+  function openProductionForm(cycleId) {
+    const c = findCycle(cycleId);
+    const pond = findPond(c.pondId);
+    document.getElementById('productionFormTitle').textContent = `แก้ไขผลผลิต — ${pond ? pond.code : ''} รุ่นที่ ${c.cycleNo}`;
+    document.getElementById('pdFormId').value = cycleId;
+    document.getElementById('pdYield').value = c.yieldKg || '';
+    document.getElementById('pdSurvival').value = c.survival ?? '';
+    document.getElementById('pdFcr').value = c.fcr ?? '';
+    document.getElementById('pdHarvest').value = c.harvest || '';
+    document.getElementById('pdGrade').value = c.grade || '';
     productionModal.classList.add('active');
   }
   document.getElementById('productionCancelBtn').addEventListener('click', () => productionModal.classList.remove('active'));
   document.getElementById('productionSaveBtn').addEventListener('click', async () => {
-    const id = parseInt(document.getElementById('pdFormId').value, 10);
+    const cycleId = parseInt(document.getElementById('pdFormId').value, 10);
+    const harvest = document.getElementById('pdHarvest').value || null;
     const dbData = {
       yield_kg: parseFloat(document.getElementById('pdYield').value) || 0,
       survival: document.getElementById('pdSurvival').value !== '' ? parseFloat(document.getElementById('pdSurvival').value) : null,
       fcr: document.getElementById('pdFcr').value !== '' ? parseFloat(document.getElementById('pdFcr').value) : null,
-      harvest_date: document.getElementById('pdHarvest').value || null,
-      grade: document.getElementById('pdGrade').value.trim() || '-',
+      harvest_date: harvest,
+      grade: document.getElementById('pdGrade').value.trim() || null,
+      status: harvest ? 'harvested' : 'growing',
     };
 
-    const { error } = await supabaseClient.from('ponds').update(dbData).eq('id', id);
+    const { error } = await supabaseClient.from('production_cycles').update(dbData).eq('id', cycleId);
     if (error) { alert('บันทึกไม่สำเร็จ: ' + error.message); return; }
 
+    // reflect harvested status on the pond too
+    const c = findCycle(cycleId);
+    if (c && harvest) {
+      await supabaseClient.from('ponds').update({ status: 'harvested' }).eq('id', c.pondId);
+    }
+
     productionModal.classList.remove('active');
-    await loadPonds();
+    await Promise.all([loadCycles(), loadPonds()]);
     renderAll();
   });
 
@@ -1463,7 +1769,8 @@
     } else {
       tbody.innerHTML = PONDS.map(p => {
         const t = costTotal(p.id);
-        const perKg = p.yieldKg ? t / p.yieldKg : null;
+        const activeCycle = activeCycleForPond(p.id);
+        const perKg = activeCycle && activeCycle.yieldKg ? t / activeCycle.yieldKg : null;
         return `
         <tr>
           <td><strong>${p.code}</strong></td>
@@ -1480,13 +1787,15 @@
 
     const itemsBody = document.querySelector('#costItemsTable tbody');
     if (COST_ITEMS.length === 0) {
-      itemsBody.innerHTML = `<tr class="empty-row"><td colspan="5">ยังไม่มีรายการค่าใช้จ่าย</td></tr>`;
+      itemsBody.innerHTML = `<tr class="empty-row"><td colspan="6">ยังไม่มีรายการค่าใช้จ่าย</td></tr>`;
     } else {
       itemsBody.innerHTML = COST_ITEMS.slice().sort((a, b) => a.pondId - b.pondId).map(item => {
         const pond = findPond(item.pondId);
+        const cycle = item.cycleId ? findCycle(item.cycleId) : null;
         return `
         <tr>
           <td><strong>${pond ? pond.code : '-'}</strong></td>
+          <td>${cycle ? 'รุ่นที่ ' + cycle.cycleNo : '-'}</td>
           <td>${CATS[item.category]}</td>
           <td>${item.desc || '-'}</td>
           <td class="num">${fmt(item.amount)}</td>
@@ -1504,6 +1813,18 @@
   /* ---------------- Cost add / edit modal ---------------- */
   const costModal = document.getElementById('costModal');
 
+  function populateCostCycleSelect(pondId, selectedCycleId) {
+    const sel = document.getElementById('costCycleSelect');
+    const cycles = cyclesForPond(pondId);
+    if (cycles.length === 0) {
+      sel.innerHTML = '<option value="">— บ่อนี้ยังไม่มีรุ่นการเลี้ยง —</option>';
+      return;
+    }
+    sel.innerHTML = cycles.map(c => `<option value="${c.id}">รุ่นที่ ${c.cycleNo}${c.status === 'growing' ? ' (กำลังเลี้ยง)' : ' (เก็บเกี่ยวแล้ว)'}</option>`).join('');
+    const active = activeCycleForPond(pondId);
+    sel.value = selectedCycleId || (active ? active.id : cycles[cycles.length - 1].id);
+  }
+
   function openCostForm(itemId) {
     const isEdit = itemId !== null && itemId !== undefined;
     document.getElementById('costFormTitle').textContent = isEdit ? 'แก้ไขรายการค่าใช้จ่าย' : 'เพิ่มรายการค่าใช้จ่าย';
@@ -1513,13 +1834,20 @@
     sel.innerHTML = PONDS.map(p => `<option value="${p.id}">${p.code}</option>`).join('');
 
     const item = isEdit ? COST_ITEMS.find(i => i.id === itemId) : null;
-    sel.value = item ? item.pondId : (PONDS[0] ? PONDS[0].id : '');
+    const pondId = item ? item.pondId : (PONDS[0] ? PONDS[0].id : '');
+    sel.value = pondId;
+    populateCostCycleSelect(pondId, item ? item.cycleId : null);
+
     document.getElementById('costCategorySelect').value = item ? item.category : 'seed';
     document.getElementById('costDesc').value = item ? item.desc : '';
     document.getElementById('costAmount').value = item ? item.amount : '';
 
     costModal.classList.add('active');
   }
+
+  document.getElementById('costPondSelect').addEventListener('change', (e) => {
+    populateCostCycleSelect(parseInt(e.target.value, 10), null);
+  });
 
   document.getElementById('addCostBtn').addEventListener('click', () => {
     if (PONDS.length === 0) { alert('กรุณาเพิ่มบ่อก่อนเพิ่มรายการค่าใช้จ่าย'); return; }
@@ -1529,12 +1857,13 @@
   document.getElementById('costSaveBtn').addEventListener('click', async () => {
     const idVal = document.getElementById('costFormId').value;
     const pondId = parseInt(document.getElementById('costPondSelect').value, 10);
+    const cycleIdVal = document.getElementById('costCycleSelect').value;
     const category = document.getElementById('costCategorySelect').value;
     const description = document.getElementById('costDesc').value.trim();
     const amount = parseFloat(document.getElementById('costAmount').value) || 0;
     if (amount <= 0) { alert('กรุณาระบุจำนวนเงินที่ถูกต้อง'); return; }
 
-    const dbData = { pond_id: pondId, category, description, amount };
+    const dbData = { pond_id: pondId, cycle_id: cycleIdVal ? parseInt(cycleIdVal, 10) : null, category, description, amount };
     const { error } = idVal
       ? await supabaseClient.from('cost_items').update(dbData).eq('id', parseInt(idVal, 10))
       : await supabaseClient.from('cost_items').insert(dbData);
@@ -1554,18 +1883,18 @@
     renderAll();
   }
 
-  /* ---------------- Render: report ---------------- */
+  /* ---------------- Render: report (per production cycle) ---------------- */
   function renderReport() {
     let totalRevenue = 0, totalCost = 0;
 
-    const rows = PONDS.map(p => {
-      const cost = costTotal(p.id);
-      const revenue = p.yieldKg * FARM_SETTINGS.sell_price;
+    const rows = CYCLES.map(c => {
+      const cost = costTotalForCycle(c.id);
+      const revenue = (c.yieldKg || 0) * FARM_SETTINGS.sell_price;
       const profit = revenue - cost;
       const margin = revenue ? (profit / revenue) * 100 : 0;
       totalRevenue += revenue;
       totalCost += cost;
-      return { p, cost, revenue, profit, margin };
+      return { c, pond: findPond(c.pondId), cost, revenue, profit, margin };
     });
 
     const totalProfit = totalRevenue - totalCost;
@@ -1580,12 +1909,13 @@
 
     const tbody = document.querySelector('#reportTable tbody');
     if (rows.length === 0) {
-      tbody.innerHTML = `<tr class="empty-row"><td colspan="6">ยังไม่มีข้อมูล</td></tr>`;
+      tbody.innerHTML = `<tr class="empty-row"><td colspan="7">ยังไม่มีข้อมูล</td></tr>`;
     } else {
       tbody.innerHTML = rows.map(r => `
         <tr>
-          <td><strong>${r.p.code}</strong></td>
-          <td><span class="badge ${STATUS_BADGE[r.p.status]}">${STATUS_LABEL[r.p.status]}</span></td>
+          <td><strong>${r.pond ? r.pond.code : '-'}</strong></td>
+          <td class="num">${r.c.cycleNo}</td>
+          <td><span class="badge ${r.c.status === 'growing' ? 'badge-growing' : 'badge-harvested'}">${r.c.status === 'growing' ? 'กำลังเลี้ยง' : 'เก็บเกี่ยวแล้ว'}</span></td>
           <td class="num">${fmt(r.revenue)}</td>
           <td class="num">${fmt(r.cost)}</td>
           <td class="num" style="color:${r.profit >= 0 ? '#1b8a3d' : '#d0342c'}"><strong>${fmt(r.profit)}</strong></td>
@@ -1594,7 +1924,7 @@
     }
 
     const trend = buildTrend();
-    const emptyTrendMsg = '<div style="width:100%;text-align:center;color:var(--muted);padding:60px 0;">ยังไม่มีข้อมูลเพียงพอสำหรับแสดงแนวโน้ม — จะแสดงเมื่อมีบ่อที่เก็บเกี่ยวแล้วหรือมีรายการต้นทุนบันทึกไว้</div>';
+    const emptyTrendMsg = '<div style="width:100%;text-align:center;color:var(--muted);padding:60px 0;">ยังไม่มีข้อมูลเพียงพอสำหรับแสดงแนวโน้ม — จะแสดงเมื่อมีรุ่นที่เก็บเกี่ยวแล้วหรือมีรายการต้นทุนบันทึกไว้</div>';
 
     if (!trend.hasData) {
       document.getElementById('trendYieldChart').innerHTML = emptyTrendMsg;
@@ -1628,13 +1958,14 @@
   document.getElementById('exportPdfBtn').addEventListener('click', () => window.print());
 
   document.getElementById('exportExcelBtn').addEventListener('click', () => {
-    let csv = '﻿' + 'รหัสบ่อ,สถานะ,รายได้ (บาท),ต้นทุนรวม (บาท),กำไร/ขาดทุน (บาท),มาร์จิ้น (%)\n';
-    PONDS.forEach(p => {
-      const cost = costTotal(p.id);
-      const revenue = p.yieldKg * FARM_SETTINGS.sell_price;
+    let csv = '﻿' + 'รหัสบ่อ,รุ่นที่,สถานะ,รายได้ (บาท),ต้นทุนรวม (บาท),กำไร/ขาดทุน (บาท),มาร์จิ้น (%)\n';
+    CYCLES.forEach(c => {
+      const pond = findPond(c.pondId);
+      const cost = costTotalForCycle(c.id);
+      const revenue = (c.yieldKg || 0) * FARM_SETTINGS.sell_price;
       const profit = revenue - cost;
       const margin = revenue ? ((profit / revenue) * 100).toFixed(1) : '0';
-      csv += `${p.code},${STATUS_LABEL[p.status]},${revenue},${cost},${profit},${margin}\n`;
+      csv += `${pond ? pond.code : ''},${c.cycleNo},${STATUS_LABEL[c.status] || c.status},${revenue},${cost},${profit},${margin}\n`;
     });
     const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
@@ -1644,6 +1975,39 @@
     a.click();
     URL.revokeObjectURL(url);
   });
+
+  /* ---------------- Render: user management (admin only) ---------------- */
+  function renderUsers() {
+    const tbody = document.querySelector('#usersTable tbody');
+    if (!tbody) return;
+    if (PROFILES.length === 0) {
+      tbody.innerHTML = `<tr class="empty-row"><td colspan="3">ไม่มีข้อมูล</td></tr>`;
+      return;
+    }
+    tbody.innerHTML = PROFILES.map(u => `
+      <tr>
+        <td><strong>${u.fullName || '-'}</strong></td>
+        <td>${u.email || '-'}</td>
+        <td>
+          <select onchange="changeUserRole('${u.id}', this.value)" ${u.id === CURRENT_USER_ID ? 'disabled title="เปลี่ยนสิทธิ์ตัวเองไม่ได้"' : ''}>
+            <option value="user" ${u.role === 'user' ? 'selected' : ''}>พนักงาน</option>
+            <option value="admin" ${u.role === 'admin' ? 'selected' : ''}>แอดมิน</option>
+          </select>
+        </td>
+      </tr>`).join('');
+  }
+
+  async function changeUserRole(userId, newRole) {
+    const { error } = await supabaseClient.from('profiles').update({ role: newRole }).eq('id', userId);
+    if (error) { alert('เปลี่ยนสิทธิ์ไม่สำเร็จ: ' + error.message); return; }
+    await loadProfiles();
+    renderUsers();
+  }
+
+  /* ---------------- Role-based UI ---------------- */
+  function applyRoleToUI() {
+    document.body.classList.toggle('role-admin', CURRENT_USER_ROLE === 'admin');
+  }
 
   /* ---------------- Nav / sidebar ---------------- */
   const sidebar = document.getElementById('sidebar');
@@ -1679,6 +2043,8 @@
     renderProduction();
     renderCost();
     renderReport();
+    renderAlerts();
+    renderUsers();
   }
 
   /* ---------------- Auth ---------------- */
@@ -1696,8 +2062,12 @@
     authOverlay.classList.remove('active');
     document.body.classList.remove('logged-out');
     document.getElementById('userEmailLabel').textContent = session.user.email;
+    CURRENT_USER_ID = session.user.id;
 
-    await Promise.all([loadPonds(), loadCostItems(), loadFarmSettings()]);
+    await loadCurrentUserProfile();
+    applyRoleToUI();
+
+    await Promise.all([loadPonds(), loadCycles(), loadCostItems(), loadFarmSettings(), loadProfiles()]);
     applyFarmSettingsToUI();
     renderAll();
 
