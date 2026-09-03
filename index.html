@@ -134,11 +134,21 @@
   .user-email { font-size: 13px; color: var(--muted); }
 
   .bell-wrap { position: relative; display: inline-flex; align-items: center; }
-  .bell-wrap i { color: var(--ink); font-size: 1.2rem; }
+  .bell-btn {
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 6px;
+    display: flex;
+    align-items: center;
+    border-radius: 8px;
+  }
+  .bell-btn:hover { background: #f0f5ff; }
+  .bell-btn i { color: var(--ink); font-size: 1.2rem; }
   .bell-badge {
     position: absolute;
-    top: -6px;
-    right: -8px;
+    top: -2px;
+    right: -2px;
     background: var(--danger);
     color: #fff;
     font-size: 11px;
@@ -150,8 +160,56 @@
     align-items: center;
     justify-content: center;
     padding: 0 4px;
+    pointer-events: none;
   }
   .bell-badge.show { display: flex; }
+
+  .bell-dropdown {
+    display: none;
+    position: absolute;
+    top: 100%;
+    right: 0;
+    margin-top: 10px;
+    width: 320px;
+    max-width: 88vw;
+    max-height: 420px;
+    overflow-y: auto;
+    background: #fff;
+    border-radius: 14px;
+    border: 1px solid var(--line);
+    box-shadow: 0 16px 40px rgba(10,60,120,0.2);
+    z-index: 300;
+  }
+  .bell-dropdown.open { display: block; }
+  .bell-dropdown-header {
+    padding: 14px 16px;
+    font-weight: bold;
+    color: var(--ink);
+    font-size: 14px;
+    border-bottom: 1px solid var(--line);
+    text-align: left;
+    position: sticky;
+    top: 0;
+    background: #fff;
+  }
+  .bell-dropdown-empty { padding: 24px 16px; color: var(--muted); font-size: 13px; text-align: center; }
+  .bell-dropdown-item {
+    display: block;
+    width: 100%;
+    padding: 12px 16px;
+    border: none;
+    border-bottom: 1px dashed var(--line);
+    background: none;
+    cursor: pointer;
+    text-align: left;
+    font-family: inherit;
+    font-size: 13px;
+  }
+  .bell-dropdown-item:hover { background: #f7faff; }
+  .bell-dropdown-item:last-child { border-bottom: none; }
+  .bell-dropdown-item .pond-code { font-weight: bold; color: var(--ink); font-size: 14px; }
+  .bell-dropdown-item .issue { color: var(--danger); display: block; margin-top: 2px; }
+  .bell-dropdown-item .alert-assignee { color: var(--muted); display: flex; align-items: center; gap: 4px; margin-top: 4px; }
 
   /* ---------- Main ---------- */
   .main {
@@ -686,8 +744,14 @@
     </nav>
     <div class="topnav-right">
       <div class="bell-wrap">
-        <i class="bi bi-bell-fill"></i>
-        <span class="bell-badge" id="bellBadge">0</span>
+        <button class="bell-btn" id="bellBtn" aria-label="การแจ้งเตือน">
+          <i class="bi bi-bell-fill"></i>
+          <span class="bell-badge" id="bellBadge">0</span>
+        </button>
+        <div class="bell-dropdown" id="bellDropdown">
+          <div class="bell-dropdown-header">การแจ้งเตือนคุณภาพน้ำ</div>
+          <div id="bellDropdownList"></div>
+        </div>
       </div>
       <span class="user-email" id="userEmailLabel"></span>
       <button class="btn btn-outline btn-sm" id="logoutBtn">ออกจากระบบ</button>
@@ -1507,14 +1571,19 @@
     return alerts;
   }
 
+  // Renders both the alert panel on the ภาพรวม page and the bell-icon
+  // dropdown (reachable from every page) from the same computeWaterAlerts()
+  // list, so the two never disagree with each other.
   function renderAlerts() {
     const alerts = computeWaterAlerts();
     const panel = document.getElementById('alertPanel');
     const bellBadge = document.getElementById('bellBadge');
+    const dropdownList = document.getElementById('bellDropdownList');
 
     if (alerts.length === 0) {
       panel.style.display = 'none';
       bellBadge.classList.remove('show');
+      dropdownList.innerHTML = '<div class="bell-dropdown-empty">ไม่มีการแจ้งเตือน — ค่าน้ำทุกบ่ออยู่ในเกณฑ์ปกติ</div>';
       return;
     }
 
@@ -1530,6 +1599,26 @@
         </div>
         <span class="alert-assignee"><i class="bi bi-person-fill"></i> ผู้ดูแล: ${pondAssigneeName(a.pond)}</span>
       </div>`).join('');
+
+    // Each item is a button — clicking it jumps to the ponds page (see the
+    // shared handler below) and closes the dropdown.
+    dropdownList.innerHTML = alerts.map((a, i) => `
+      <button type="button" class="bell-dropdown-item" data-alert-index="${i}">
+        <span class="pond-code">${a.pond.code}</span>
+        <span class="issue">${a.issue}</span>
+        <span class="alert-assignee"><i class="bi bi-person-fill"></i> ${pondAssigneeName(a.pond)}</span>
+      </button>`).join('');
+
+    dropdownList.querySelectorAll('.bell-dropdown-item').forEach((btn, i) => {
+      btn.addEventListener('click', () => goToPondFromAlert(alerts[i]));
+    });
+  }
+
+  // Closes the dropdown and switches to the ponds page — used both from the
+  // bell dropdown and could be reused anywhere else an alert needs a link.
+  function goToPondFromAlert(alert) {
+    document.getElementById('bellDropdown').classList.remove('open');
+    document.querySelector('.topnav-links a[data-page="ponds"]').click();
   }
 
   /* ---------------- Render: ponds ---------------- */
@@ -2201,6 +2290,21 @@
 
   mobileMenuToggle.addEventListener('click', () => {
     topnavLinks.classList.toggle('mobile-open');
+  });
+
+  // Bell dropdown — toggles open on click, closes when clicking anywhere
+  // outside it (the individual item click handlers are wired inside
+  // renderAlerts(), since the list is rebuilt every render).
+  const bellBtn = document.getElementById('bellBtn');
+  const bellDropdown = document.getElementById('bellDropdown');
+  bellBtn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    bellDropdown.classList.toggle('open');
+  });
+  document.addEventListener('click', (e) => {
+    if (bellDropdown.classList.contains('open') && !bellDropdown.contains(e.target) && e.target !== bellBtn) {
+      bellDropdown.classList.remove('open');
+    }
   });
 
   document.querySelectorAll('.topnav-links a').forEach(link => {
