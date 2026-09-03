@@ -1495,6 +1495,8 @@
     }).join('');
   }
 
+  // Read-only summary popup (#pondModal) — separate from the add/edit form
+  // below (#pondFormModal), don't confuse the two.
   function openPondDetail(id) {
     const p = findPond(id);
     document.getElementById('pondModalTitle').textContent = `รายละเอียด ${p.code}`;
@@ -1522,6 +1524,8 @@
   /* ---------------- Pond add / edit form (admin only) ---------------- */
   const pondFormModal = document.getElementById('pondFormModal');
 
+  // Fills the "พนักงานที่รับผิดชอบ" dropdown in the pond form with staff
+  // (role='user') profiles only — admins aren't offered as an assignee.
   function populateAssignedUserSelect(selectedId) {
     const sel = document.getElementById('pfAssignedUser');
     const options = ['<option value="">— ไม่ระบุ (แอดมินดูแลเอง) —</option>']
@@ -1530,6 +1534,9 @@
     sel.value = selectedId || '';
   }
 
+  // Add/edit pond modal — id === null means "add new", otherwise pre-fills
+  // every field from the matching pond (admin-only in the UI; RLS enforces
+  // it regardless if a non-admin somehow triggers this).
   function openPondForm(id) {
     const isEdit = id !== null;
     document.getElementById('pondFormTitle').textContent = isEdit ? 'แก้ไขข้อมูลบ่อ' : 'เพิ่มบ่อใหม่';
@@ -1554,6 +1561,8 @@
   document.getElementById('addPondBtn').addEventListener('click', () => openPondForm(null));
   document.getElementById('pondFormCancelBtn').addEventListener('click', () => pondFormModal.classList.remove('active'));
 
+  // Save handler shared by add + edit — inserts a new row when the hidden
+  // #pondFormId is empty, otherwise updates the existing pond by that id.
   document.getElementById('pondFormSaveBtn').addEventListener('click', async () => {
     const idVal = document.getElementById('pondFormId').value;
     const code = document.getElementById('pfCode').value.trim();
@@ -1586,6 +1595,10 @@
     renderAll();
   });
 
+  // Deletes a pond outright. cost_items cascades automatically, but
+  // production_cycles.pond_id is ON DELETE RESTRICT on purpose (protects
+  // cycle history) — that failure is caught below and shown as a friendly
+  // message instead of a raw DB error.
   async function deletePond(id) {
     const p = findPond(id);
     if (!confirm(`ต้องการลบ ${p.code} ใช่หรือไม่? ข้อมูลต้นทุนที่เกี่ยวข้องจะถูกลบด้วย`)) return;
@@ -1603,6 +1616,8 @@
   }
 
   /* ---------------- Render: production cycles ---------------- */
+  // One row per production CYCLE, not per pond — a pond with 3 past cycles
+  // shows 3 rows here, since we keep full history (see production_cycles).
   function renderProduction() {
     const chart = document.getElementById('yieldChart');
     if (CYCLES.length === 0) {
@@ -1668,6 +1683,10 @@
     ).join('')}</div>`;
   }
 
+  // Opens the "เริ่มรุ่นใหม่" form for one pond. Only reachable for ponds with
+  // no currently-growing cycle (renderStartCycleButtons / the cost modal's
+  // costStartCycleLink both check this before calling it) — a pond can only
+  // have one growing cycle at a time.
   const startCycleModal = document.getElementById('startCycleModal');
   function openStartCycleForm(pondId) {
     const p = findPond(pondId);
@@ -1680,6 +1699,10 @@
     startCycleModal.classList.add('active');
   }
   document.getElementById('startCycleCancelBtn').addEventListener('click', () => startCycleModal.classList.remove('active'));
+  // cycle_no is computed client-side as max(existing)+1; a genuine concurrent
+  // insert race is caught server-side by the unique(pond_id, cycle_no)
+  // constraint, not handled specially here (rare enough for a single-farm
+  // app not to bother with retry logic).
   document.getElementById('startCycleSaveBtn').addEventListener('click', async () => {
     const pondId = parseInt(document.getElementById('scPondId').value, 10);
     const release = document.getElementById('scRelease').value || null;
@@ -1700,6 +1723,8 @@
     renderAll();
   });
 
+  // Edits an existing cycle's results — note this takes a CYCLE id, not a
+  // pond id, unlike the old single-cycle-per-pond design this replaced.
   const productionModal = document.getElementById('productionModal');
   function openProductionForm(cycleId) {
     const c = findCycle(cycleId);
@@ -1714,6 +1739,9 @@
     productionModal.classList.add('active');
   }
   document.getElementById('productionCancelBtn').addEventListener('click', () => productionModal.classList.remove('active'));
+  // Filling in a harvest date here also flips the cycle's status to
+  // 'harvested' and mirrors that onto the pond's own status, so the ponds
+  // page badge and the "+ เริ่มรุ่นใหม่" eligibility check both stay correct.
   document.getElementById('productionSaveBtn').addEventListener('click', async () => {
     const cycleId = parseInt(document.getElementById('pdFormId').value, 10);
     const harvest = document.getElementById('pdHarvest').value || null;
@@ -1818,6 +1846,9 @@
   /* ---------------- Cost add / edit modal ---------------- */
   const costModal = document.getElementById('costModal');
 
+  // Cycle dropdown for the cost-item form, scoped to whichever pond is
+  // currently selected — defaults to that pond's active (growing) cycle so
+  // costs are attributed correctly for per-cycle profit in the report page.
   function populateCostCycleSelect(pondId, selectedCycleId) {
     const sel = document.getElementById('costCycleSelect');
     const cycles = cyclesForPond(pondId);
@@ -1830,6 +1861,7 @@
     sel.value = selectedCycleId || (active ? active.id : cycles[cycles.length - 1].id);
   }
 
+  // Add/edit cost-item modal — itemId null/undefined means "add new".
   function openCostForm(itemId) {
     const isEdit = itemId !== null && itemId !== undefined;
     document.getElementById('costFormTitle').textContent = isEdit ? 'แก้ไขรายการค่าใช้จ่าย' : 'เพิ่มรายการค่าใช้จ่าย';
@@ -1893,6 +1925,7 @@
     renderAll();
   });
 
+  // Cost items are safe to hard-delete (no other table references them).
   async function deleteCostItem(id) {
     if (!confirm('ต้องการลบรายการค่าใช้จ่ายนี้ใช่หรือไม่?')) return;
     const { error } = await supabaseClient.from('cost_items').delete().eq('id', id);
@@ -1902,6 +1935,9 @@
   }
 
   /* ---------------- Render: report (per production cycle) ---------------- */
+  // Profit/loss is computed per cycle (revenue = that cycle's yieldKg × the
+  // farm's sell price, cost = costTotalForCycle) rather than per pond, so a
+  // pond's older harvested cycles don't get mixed into its current one.
   function renderReport() {
     let totalRevenue = 0, totalCost = 0;
 
@@ -1973,8 +2009,13 @@
   }
 
   /* ---------------- Export ---------------- */
+  // "PDF" is just the browser's own print dialog — @media print in the
+  // <style> block hides the chrome (nav/buttons) so only the report prints.
   document.getElementById('exportPdfBtn').addEventListener('click', () => window.print());
 
+  // "Excel" is actually a CSV built by hand, not a real .xlsx — Excel opens
+  // CSV fine, and this avoids pulling in a spreadsheet-writing library for
+  // one button. The leading BOM makes Excel render Thai correctly.
   document.getElementById('exportExcelBtn').addEventListener('click', () => {
     let csv = '﻿' + 'รหัสบ่อ,รุ่นที่,สถานะ,รายได้ (บาท),ต้นทุนรวม (บาท),กำไร/ขาดทุน (บาท),มาร์จิ้น (%)\n';
     CYCLES.forEach(c => {
@@ -1995,6 +2036,9 @@
   });
 
   /* ---------------- Render: user management (admin only) ---------------- */
+  // PROFILES is only ever populated for admins (loadProfiles() no-ops to []
+  // for everyone else, matching the RLS policy), so this table is naturally
+  // empty/hidden for non-admin sessions without any extra check here.
   function renderUsers() {
     const tbody = document.querySelector('#usersTable tbody');
     if (!tbody) return;
@@ -2015,6 +2059,9 @@
       </tr>`).join('');
   }
 
+  // The select's onchange fires this directly (see renderUsers above) — the
+  // dropdown is disabled for CURRENT_USER_ID so an admin can't demote
+  // themselves by accident and get locked out of the panel.
   async function changeUserRole(userId, newRole) {
     const { error } = await supabaseClient.from('profiles').update({ role: newRole }).eq('id', userId);
     if (error) { alert('เปลี่ยนสิทธิ์ไม่สำเร็จ: ' + error.message); return; }
@@ -2023,11 +2070,18 @@
   }
 
   /* ---------------- Role-based UI ---------------- */
+  // Toggles a body class that CSS uses to show/hide .admin-only elements
+  // (add/delete pond buttons, the user-management panel). This is UX only —
+  // the real enforcement is server-side RLS, so nothing security-sensitive
+  // should ever rely on this class alone.
   function applyRoleToUI() {
     document.body.classList.toggle('role-admin', CURRENT_USER_ROLE === 'admin');
   }
 
   /* ---------------- Nav (top bar) ---------------- */
+  // Desktop: .topnav-links is a horizontally-scrollable pill row (always
+  // visible). Mobile (≤768px, see CSS): it's hidden by default and toggled
+  // open as a dropdown by the hamburger button below.
   const topnavLinks = document.querySelector('.topnav-links');
   const mobileMenuToggle = document.getElementById('mobileMenuToggle');
 
@@ -2055,6 +2109,10 @@
   });
 
   /* ---------------- Init ---------------- */
+  // Re-renders every page section from current cache state. No diffing —
+  // call this after any load*()/mutation rather than the individual
+  // render*() functions, so cross-page totals (e.g. cost → report) stay in
+  // sync with each other.
   function renderAll() {
     renderPonds();
     renderProduction();
@@ -2070,11 +2128,19 @@
   const loginError = document.getElementById('loginError');
   const loginSubmitBtn = document.getElementById('loginSubmitBtn');
 
+  // Also sets body.logged-out, which CSS uses to hide .topnav/.main entirely
+  // (not just visually cover them) — otherwise the page becomes scrollable
+  // into empty space, since that markup is still in the DOM under the fixed
+  // overlay.
   function showLogin() {
     authOverlay.classList.add('active');
     document.body.classList.add('logged-out');
   }
 
+  // Runs once per successful login (and again if Supabase silently restores
+  // a session from localStorage on page load). Loads the user's own role
+  // first, since applyRoleToUI() gates which UI elements even render, then
+  // loads every table in parallel before the first renderAll().
   async function initAppAfterLogin(session) {
     authOverlay.classList.remove('active');
     document.body.classList.remove('logged-out');
@@ -2116,6 +2182,9 @@
     await supabaseClient.auth.signOut();
   });
 
+  // Single source of truth for auth state — fires on real login/logout, and
+  // also once at page load if Supabase restores a persisted session, so
+  // there's no separate "check for existing session" call needed elsewhere.
   supabaseClient.auth.onAuthStateChange((event, session) => {
     if (session) {
       initAppAfterLogin(session);

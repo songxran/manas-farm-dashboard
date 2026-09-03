@@ -4,6 +4,8 @@
   // classic <script> tags share the same global scope, so these top-level
   // identifiers are visible here without any import.
 
+  // Formats a plain 'YYYY-MM-DD' date string as readable Thai (Buddhist
+  // calendar year, via toLocaleDateString('th-TH')) for table display.
   function formatDate(dateStr) {
     if (!dateStr) return '-';
     return new Date(dateStr + 'T00:00:00').toLocaleDateString('th-TH', {
@@ -11,6 +13,8 @@
     });
   }
 
+  // Today's date as 'YYYY-MM-DD' using the browser's local clock — used to
+  // default the date field both on first load and after each save.
   function todayStr() {
     const d = new Date();
     const yyyy = d.getFullYear();
@@ -72,6 +76,8 @@
       .join('');
   }
 
+  // Resets the daily-log form back to defaults after a successful save
+  // (date stays at today rather than going blank, per user preference).
   function clearForm() {
     document.getElementById('dlDate').value = todayStr();
     document.getElementById('dlFeed').value = '';
@@ -83,6 +89,9 @@
     populatePondSelect();
   }
 
+  // Validates and inserts one daily_logs row (at least one of feed/water
+  // fields is required, all independently optional), then — if a
+  // water-quality value was included — mirrors it onto the pond record too.
   async function handleSave() {
     const pondSelect = document.getElementById('dlPond');
     const dateInput = document.getElementById('dlDate');
