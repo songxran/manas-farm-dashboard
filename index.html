@@ -280,16 +280,19 @@
   .alert-card h3 { font-size: 18px; color: var(--danger); margin-bottom: 12px; text-align: left; display: flex; align-items: center; gap: 8px; }
   .alert-item {
     display: flex;
-    justify-content: space-between;
-    align-items: center;
+    flex-direction: column;
+    gap: 4px;
     padding: 10px 0;
     border-top: 1px dashed #ffd6d6;
     font-size: 14px;
     text-align: left;
   }
   .alert-item:first-of-type { border-top: none; }
+  .alert-item .alert-top { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; flex-wrap: wrap; }
   .alert-item .pond-code { font-weight: bold; color: var(--ink); }
   .alert-item .issue { color: var(--danger); }
+  .alert-item .alert-assignee { font-size: 12px; color: var(--muted); display: flex; align-items: center; gap: 4px; }
+  .value-abnormal { color: var(--danger); font-weight: bold; }
 
   /* ---------- Map (ภาพรวม) ---------- */
   .map-panel { max-width: 780px; margin: 24px auto 0; }
@@ -1432,16 +1435,74 @@
     return COST_ITEMS.filter(i => i.pondId === pondId && i.category === cat).reduce((sum, i) => sum + i.amount, 0);
   }
 
-  /* ---------------- Water quality alerts ---------------- */
+  /* ---------------- Water quality alerts (species-specific) ---------------- */
+  // Safe ranges per species — these differ enough between species that a
+  // single fixed threshold (the old pH<7 / DO<4 rule) was wrong for at
+  // least one of them: กุ้งก้ามกราม is a FRESHWATER prawn, so it wants low
+  // salinity, unlike the brackish/marine กุ้งกุลาดำ and กุ้งขาวแวนนาไม.
+  // DO only has a floor (a "too high" reading isn't a real farm problem).
+  // Ranges are general aquaculture guidelines, not lab-precise; good enough
+  // to flag a pond that clearly needs a farmer's attention.
+  const SPECIES_STANDARDS = {
+    'กุ้งกุลาดำ':     { ph: [7.5, 8.5], doMin: 4,   temp: [28, 32], salinity: [10, 25] },
+    'กุ้งขาวแวนนาไม': { ph: [7.5, 8.5], doMin: 4,   temp: [28, 32], salinity: [5, 25] },
+    'กุ้งก้ามกราม':   { ph: [7.0, 8.5], doMin: 3.5, temp: [26, 31], salinity: [0, 5] },
+  };
+  const DEFAULT_STANDARD = { ph: [7.0, 9.0], doMin: 4, temp: [25, 33], salinity: [0, 30] };
+
+  function standardForSpecies(species) {
+    return SPECIES_STANDARDS[species] || DEFAULT_STANDARD;
+  }
+
+  // field is one of 'ph'|'do'|'temp'|'salinity' — just a discriminator for
+  // which range to check against, not a literal property name (callers pass
+  // whichever value they have, e.g. entry.do_level for daily_logs rows).
+  // Returns null when the value is within range (or missing), otherwise a
+  // short Thai description of how far out of range it is.
+  function checkWaterValue(field, value, species) {
+    if (value === null || value === undefined || value === '') return null;
+    const std = standardForSpecies(species);
+    const v = Number(value);
+    if (field === 'ph') {
+      const [lo, hi] = std.ph;
+      if (v < lo) return `pH ต่ำเกินไป (${v}, มาตรฐาน ${lo}-${hi})`;
+      if (v > hi) return `pH สูงเกินไป (${v}, มาตรฐาน ${lo}-${hi})`;
+    } else if (field === 'do') {
+      if (v < std.doMin) return `ออกซิเจน (DO) ต่ำเกินไป (${v} mg/L, ต้องไม่ต่ำกว่า ${std.doMin})`;
+    } else if (field === 'temp') {
+      const [lo, hi] = std.temp;
+      if (v < lo) return `อุณหภูมิต่ำเกินไป (${v}°C, มาตรฐาน ${lo}-${hi}°C)`;
+      if (v > hi) return `อุณหภูมิสูงเกินไป (${v}°C, มาตรฐาน ${lo}-${hi}°C)`;
+    } else if (field === 'salinity') {
+      const [lo, hi] = std.salinity;
+      if (v < lo) return `ความเค็มต่ำเกินไป (${v} ppt, มาตรฐาน ${lo}-${hi} ppt)`;
+      if (v > hi) return `ความเค็มสูงเกินไป (${v} ppt, มาตรฐาน ${lo}-${hi} ppt)`;
+    }
+    return null;
+  }
+
+  // Wraps a water-quality value in red/bold markup when it's outside its
+  // species' standard — shared by the ponds table and (via window, see
+  // bottom of file) the daily-log table in app.js.
+  function waterValueHtml(field, value, unit, species) {
+    if (value === null || value === undefined) return '-';
+    const issue = checkWaterValue(field, value, species);
+    return issue ? `<span class="value-abnormal" title="${issue}">${value}${unit}</span>` : `${value}${unit}`;
+  }
+
+  function pondAssigneeName(p) {
+    if (!p.assignedUserId) return 'แอดมิน (ไม่ได้มอบหมาย)';
+    const u = PROFILES.find(x => x.id === p.assignedUserId);
+    return (u && (u.fullName || u.email)) || 'พนักงาน';
+  }
+
   function computeWaterAlerts() {
     const alerts = [];
     PONDS.forEach(p => {
-      if (p.ph !== null && p.ph !== undefined && p.ph < 7) {
-        alerts.push({ pond: p, issue: `pH ต่ำผิดปกติ (${p.ph})` });
-      }
-      if (p.do !== null && p.do !== undefined && p.do < 4) {
-        alerts.push({ pond: p, issue: `ออกซิเจน (DO) ต่ำผิดปกติ (${p.do} mg/L)` });
-      }
+      [['ph', p.ph], ['do', p.do], ['temp', p.temp], ['salinity', p.salinity]].forEach(([field, value]) => {
+        const issue = checkWaterValue(field, value, p.species);
+        if (issue) alerts.push({ pond: p, field, issue });
+      });
     });
     return alerts;
   }
@@ -1463,8 +1524,11 @@
 
     document.getElementById('alertList').innerHTML = alerts.map(a => `
       <div class="alert-item">
-        <span class="pond-code">${a.pond.code}</span>
-        <span class="issue">${a.issue}</span>
+        <div class="alert-top">
+          <span class="pond-code">${a.pond.code}</span>
+          <span class="issue">${a.issue}</span>
+        </div>
+        <span class="alert-assignee"><i class="bi bi-person-fill"></i> ผู้ดูแล: ${pondAssigneeName(a.pond)}</span>
       </div>`).join('');
   }
 
@@ -1481,10 +1545,13 @@
       return;
     }
     tbody.innerHTML = PONDS.map(p => {
+      // Each value is individually red-highlighted against this pond's
+      // species standard — not just a flat "low pH" rule (see
+      // computeWaterAlerts / SPECIES_STANDARDS above).
       const water = (p.ph !== null && p.ph !== undefined)
-        ? `${p.ph} / ${p.do} mg/L / ${p.temp}°C / ${p.salinity} ppt`
+        ? `${waterValueHtml('ph', p.ph, '', p.species)} / ${waterValueHtml('do', p.do, ' mg/L', p.species)} / ${waterValueHtml('temp', p.temp, '°C', p.species)} / ${waterValueHtml('salinity', p.salinity, ' ppt', p.species)}`
         : '<span style="color:var(--muted)">- ไม่มีการบันทึก -</span>';
-      const assignee = p.assignedUserId ? (PROFILES.find(u => u.id === p.assignedUserId)?.fullName || PROFILES.find(u => u.id === p.assignedUserId)?.email || 'พนักงาน') : '<span style="color:var(--muted)">- ไม่ระบุ -</span>';
+      const assignee = p.assignedUserId ? pondAssigneeName(p) : '<span style="color:var(--muted)">- ไม่ระบุ -</span>';
       const manageBtns = CURRENT_USER_ROLE === 'admin'
         ? `<button class="btn btn-outline btn-sm" onclick="openPondForm(${p.id})">แก้ไข</button>
            <button class="btn btn-danger btn-sm" onclick="deletePond(${p.id})">ลบ</button>`
@@ -1515,7 +1582,7 @@
     document.getElementById('pondModalTitle').textContent = `รายละเอียด ${p.code}`;
     const total = costTotal(p.id);
     const active = activeCycleForPond(p.id);
-    const assignee = p.assignedUserId ? (PROFILES.find(u => u.id === p.assignedUserId)?.fullName || PROFILES.find(u => u.id === p.assignedUserId)?.email || 'พนักงาน') : '-';
+    const assignee = p.assignedUserId ? pondAssigneeName(p) : '-';
     document.getElementById('pondModalBody').innerHTML = `
       <div><div class="d-label">สถานะ</div><div class="d-value">${STATUS_LABEL[p.status]}</div></div>
       <div><div class="d-label">ชนิดที่เลี้ยง</div><div class="d-value">${p.species}</div></div>
@@ -1523,8 +1590,8 @@
       <div><div class="d-label">ความลึก</div><div class="d-value">${p.depth} ม.</div></div>
       <div><div class="d-label">พนักงานที่รับผิดชอบ</div><div class="d-value">${assignee}</div></div>
       <div><div class="d-label">รุ่นที่กำลังเลี้ยง</div><div class="d-value">${active ? 'รุ่นที่ ' + active.cycleNo : '-'}</div></div>
-      <div><div class="d-label">pH / DO</div><div class="d-value">${p.ph ?? '-'} / ${p.do ?? '-'}</div></div>
-      <div><div class="d-label">อุณหภูมิ / ความเค็ม</div><div class="d-value">${p.temp ?? '-'}°C / ${p.salinity ?? '-'} ppt</div></div>
+      <div><div class="d-label">pH / DO</div><div class="d-value">${waterValueHtml('ph', p.ph, '', p.species)} / ${waterValueHtml('do', p.do, '', p.species)}</div></div>
+      <div><div class="d-label">อุณหภูมิ / ความเค็ม</div><div class="d-value">${waterValueHtml('temp', p.temp, '°C', p.species)} / ${waterValueHtml('salinity', p.salinity, ' ppt', p.species)}</div></div>
       <div><div class="d-label">ผลผลิตรุ่นปัจจุบัน</div><div class="d-value">${active && active.yieldKg ? fmt(active.yieldKg) + ' กก.' : '-'}</div></div>
       <div><div class="d-label">ต้นทุนรวมทั้งหมด</div><div class="d-value">${fmt(total)} บาท</div></div>
     `;

@@ -58,18 +58,27 @@
       return;
     }
 
+    // checkWaterValue() comes from index.html's inline script (species-aware
+    // thresholds) — reused here so a daily-log reading outside standard for
+    // that pond's species shows red the same way the ponds table does.
     tbody.innerHTML = data
       .map(entry => {
         const pond = typeof findPond === 'function' ? findPond(entry.pond_id) : null;
+        const species = pond ? pond.species : null;
+        const cell = (field, value) => {
+          if (value === null || value === undefined) return '-';
+          const abnormal = typeof checkWaterValue === 'function' && checkWaterValue(field, value, species);
+          return abnormal ? `<span class="value-abnormal" title="${abnormal}">${value}</span>` : value;
+        };
         return `
         <tr>
           <td><strong>${pond ? pond.code : '-'}</strong></td>
           <td>${formatDate(entry.log_date)}</td>
           <td class="num">${entry.feed_amount ?? '-'}</td>
-          <td class="num">${entry.ph ?? '-'}</td>
-          <td class="num">${entry.do_level ?? '-'}</td>
-          <td class="num">${entry.temp ?? '-'}</td>
-          <td class="num">${entry.salinity ?? '-'}</td>
+          <td class="num">${cell('ph', entry.ph)}</td>
+          <td class="num">${cell('do', entry.do_level)}</td>
+          <td class="num">${cell('temp', entry.temp)}</td>
+          <td class="num">${cell('salinity', entry.salinity)}</td>
           <td>${entry.note ? entry.note : '-'}</td>
         </tr>`;
       })
