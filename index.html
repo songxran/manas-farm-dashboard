@@ -695,6 +695,20 @@
     .summary-row { grid-template-columns: 1fr; }
     .detail-grid { grid-template-columns: 1fr; }
     .field-grid { grid-template-columns: 1fr; }
+
+    /* The bell button sits near the left edge of the topbar on mobile (next to
+       the hamburger + logo), so anchoring the dropdown to the button's own
+       position (right:0 within .bell-wrap) pushed most of it off-screen to the
+       left — pin it to the viewport instead, below the topbar, full-width. */
+    .bell-dropdown {
+      position: fixed;
+      top: 58px;
+      left: 10px;
+      right: 10px;
+      width: auto;
+      max-width: none;
+      max-height: calc(100vh - 90px);
+    }
   }
 
   @media print {
