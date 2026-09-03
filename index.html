@@ -1192,6 +1192,9 @@
       <div class="field">
         <label>รุ่นที่</label>
         <select id="costCycleSelect"></select>
+        <div style="margin-top:6px;">
+          <a href="#" id="costStartCycleLink" style="font-size:13px;color:var(--blue-3);text-decoration:underline;">+ เริ่มรุ่นใหม่สำหรับบ่อนี้</a>
+        </div>
       </div>
       <div class="field">
         <label>หมวดหมู่</label>
@@ -1849,6 +1852,19 @@
 
   document.getElementById('costPondSelect').addEventListener('change', (e) => {
     populateCostCycleSelect(parseInt(e.target.value, 10), null);
+  });
+
+  document.getElementById('costStartCycleLink').addEventListener('click', (e) => {
+    e.preventDefault();
+    const pondId = parseInt(document.getElementById('costPondSelect').value, 10);
+    const pond = findPond(pondId);
+    const active = activeCycleForPond(pondId);
+    if (active) {
+      alert(`${pond.code} กำลังเลี้ยงรุ่นที่ ${active.cycleNo} อยู่ — ต้องบันทึกวันที่เก็บเกี่ยวรุ่นนี้ก่อน (หน้า "ผลผลิต" → แก้ไข) ถึงจะเริ่มรุ่นใหม่ได้`);
+      return;
+    }
+    costModal.classList.remove('active');
+    openStartCycleForm(pondId);
   });
 
   document.getElementById('addCostBtn').addEventListener('click', () => {
