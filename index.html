@@ -721,7 +721,7 @@
               </div>
               <div class="stat-card">
                 <div class="icon"><i class="bi bi-tag-fill"></i></div>
-                <div class="value">กุลาดำ</div>
+                <div class="value" id="speciesListStat" style="font-size:1.6rem;">กุลาดำ</div>
                 <div class="label">ชนิดกุ้งที่เลี้ยง</div>
               </div>
             </div>
@@ -1070,7 +1070,11 @@
         </div>
         <div class="field">
           <label>ชนิดที่เลี้ยง</label>
-          <input type="text" id="pfSpecies" placeholder="กุ้งกุลาดำ">
+          <select id="pfSpecies">
+            <option value="กุ้งกุลาดำ">กุ้งกุลาดำ</option>
+            <option value="กุ้งก้ามกราม">กุ้งก้ามกราม</option>
+            <option value="กุ้งขาวแวนนาไม">กุ้งขาวแวนนาไม</option>
+          </select>
         </div>
       </div>
       <div class="field-grid">
@@ -1127,7 +1131,11 @@
       </div>
       <div class="field">
         <label>ชนิดที่เลี้ยง</label>
-        <input type="text" id="scSpecies" placeholder="กุ้งกุลาดำ">
+        <select id="scSpecies">
+          <option value="กุ้งกุลาดำ">กุ้งกุลาดำ</option>
+          <option value="กุ้งก้ามกราม">กุ้งก้ามกราม</option>
+          <option value="กุ้งขาวแวนนาไม">กุ้งขาวแวนนาไม</option>
+        </select>
       </div>
       <div class="btn-row">
         <button class="btn btn-primary" id="startCycleSaveBtn">เริ่มรุ่นใหม่</button>
@@ -1448,6 +1456,9 @@
   function renderPonds() {
     document.getElementById('pondCountStat').textContent = PONDS.length;
 
+    const speciesList = [...new Set(PONDS.map(p => p.species).filter(s => s && s !== '-'))];
+    document.getElementById('speciesListStat').textContent = speciesList.length ? speciesList.join(', ') : '-';
+
     const tbody = document.querySelector('#pondsTable tbody');
     if (PONDS.length === 0) {
       tbody.innerHTML = `<tr class="empty-row"><td colspan="8">ยังไม่มีข้อมูลบ่อ</td></tr>`;
@@ -1524,7 +1535,8 @@
     const p = isEdit ? findPond(id) : null;
     document.getElementById('pfCode').value = p ? p.code : '';
     document.getElementById('pfStatus').value = p ? p.status : 'empty';
-    document.getElementById('pfSpecies').value = p ? (p.species === '-' ? '' : p.species) : '';
+    const speciesSel = document.getElementById('pfSpecies');
+    speciesSel.value = (p && [...speciesSel.options].some(o => o.value === p.species)) ? p.species : 'กุ้งกุลาดำ';
     document.getElementById('pfSize').value = p ? p.size : '';
     document.getElementById('pfDepth').value = p ? p.depth : '';
     document.getElementById('pfPh').value = p && p.ph !== null ? p.ph : '';
@@ -1660,7 +1672,8 @@
     document.getElementById('scPondId').value = pondId;
     const d = new Date();
     document.getElementById('scRelease').value = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
-    document.getElementById('scSpecies').value = p.species === '-' ? '' : p.species;
+    const scSpeciesSel = document.getElementById('scSpecies');
+    scSpeciesSel.value = [...scSpeciesSel.options].some(o => o.value === p.species) ? p.species : 'กุ้งกุลาดำ';
     startCycleModal.classList.add('active');
   }
   document.getElementById('startCycleCancelBtn').addEventListener('click', () => startCycleModal.classList.remove('active'));
