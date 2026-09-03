@@ -48,7 +48,6 @@
     --gold: #ffd166;
     --card-bg: rgba(255, 255, 255, 0.08);
     --text: #eaf3ff;
-    --sidebar-width: 250px;
     --ink: #16305c;
     --muted: #7c93b8;
     --line: #eef2f8;
@@ -69,134 +68,72 @@
       linear-gradient(160deg, var(--blue-1) 0%, var(--blue-2) 45%, var(--blue-3) 100%);
     min-height: 100vh;
     display: flex;
+    flex-direction: column;
   }
 
   h1, h2, h3 { font-weight: bold; text-align: left; }
   p, span, li { text-align: center; }
 
-  /* ---------- Sidebar ---------- */
-  .sidebar {
-    width: var(--sidebar-width);
-    flex-shrink: 0;
-    height: 100vh;
+  /* ---------- Top navigation ---------- */
+  .topnav {
+    background: #ffffff;
+    border-bottom: 1px solid var(--line);
+    padding: 10px 24px;
+    display: flex;
+    align-items: center;
+    gap: 18px;
     position: sticky;
     top: 0;
-    background: linear-gradient(200deg, #01102b, #062a5c);
-    border-right: 1px solid rgba(255,255,255,0.08);
-    display: flex;
-    flex-direction: column;
-    transition: transform 0.25s ease;
     z-index: 200;
+    box-shadow: 0 4px 16px rgba(10,60,120,0.06);
   }
 
-  .sidebar-header {
+  .topnav-brand { display: flex; align-items: center; gap: 10px; flex-shrink: 0; }
+  .topnav-brand .logo-mini {
+    width: 38px; height: 38px; border-radius: 50%; overflow: hidden;
+    border: 2px solid var(--gold); flex-shrink: 0;
+  }
+  .topnav-brand .logo-mini img { width: 100%; height: 100%; object-fit: cover; }
+  .topnav-brand .title { font-size: 17px; font-weight: bold; color: var(--ink); white-space: nowrap; }
+
+  .topnav-links {
     display: flex;
     align-items: center;
-    gap: 12px;
-    padding: 22px 20px;
-    border-bottom: 1px solid rgba(255,255,255,0.08);
-  }
-
-  .sidebar-header .logo-mini {
-    width: 40px;
-    height: 40px;
-    border-radius: 50%;
-    overflow: hidden;
-    border: 2px solid var(--gold);
-    flex-shrink: 0;
-  }
-
-  .sidebar-header .logo-mini img {
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-  }
-
-  .sidebar-header .title {
-    font-size: 20px;
-    font-weight: bold;
-    color: #fff;
-    text-align: left;
-  }
-
-  .nav {
-    list-style: none;
-    padding: 14px 12px;
+    gap: 6px;
     flex: 1;
-    overflow-y: auto;
+    min-width: 0;
+    overflow-x: auto;
+    scrollbar-width: none;
   }
+  .topnav-links::-webkit-scrollbar { display: none; }
 
-  .nav li { margin-bottom: 6px; }
-
-  .nav a {
+  .topnav-links a {
     display: flex;
     align-items: center;
-    gap: 12px;
-    padding: 11px 14px;
-    border-radius: 10px;
-    color: var(--blue-light);
+    gap: 7px;
+    padding: 9px 16px;
+    border-radius: 999px;
+    color: var(--muted);
     text-decoration: none;
     font-size: 14px;
-    font-weight: 500;
+    font-weight: 600;
+    white-space: nowrap;
     transition: background 0.15s, color 0.15s;
     cursor: pointer;
   }
-
-  .nav a:hover { background: rgba(255,255,255,0.08); color: #fff; }
-
-  .nav a.active {
+  .topnav-links a:hover { background: #f0f5ff; color: var(--blue-3); }
+  .topnav-links a.active {
     background: linear-gradient(90deg, var(--blue-4), #1565c0);
     color: #fff;
-    box-shadow: 0 4px 14px rgba(33,150,243,0.4);
+    box-shadow: 0 4px 14px rgba(33,150,243,0.35);
   }
+  .topnav-links .icon { font-size: 1rem; display: flex; }
 
-  .nav .icon { width: 20px; text-align: center; font-size: 1.1rem; }
-
-  .sidebar-footer {
-    padding: 16px 20px;
-    border-top: 1px solid rgba(255,255,255,0.08);
-    font-size: 13px;
-    color: rgba(234,243,255,0.55);
-    text-align: left;
-  }
-
-  /* ---------- Overlay (mobile) ---------- */
-  .overlay {
-    display: none;
-    position: fixed;
-    inset: 0;
-    background: rgba(0,0,0,0.5);
-    z-index: 150;
-  }
-
-  /* ---------- Main ---------- */
-  .main {
-    flex: 1;
-    min-width: 0;
-    display: flex;
-    flex-direction: column;
-  }
-
-  .topbar {
-    height: 66px;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 0 24px;
-    position: sticky;
-    top: 0;
-    background: rgba(2, 26, 63, 0.55);
-    backdrop-filter: blur(10px);
-    border-bottom: 1px solid rgba(255,255,255,0.08);
-    z-index: 100;
-  }
-
-  .topbar-left { display: flex; align-items: center; gap: 14px; }
-  .topbar-right { display: flex; align-items: center; gap: 14px; }
-  .user-email { font-size: 13px; color: var(--blue-light); }
+  .topnav-right { display: flex; align-items: center; gap: 14px; flex-shrink: 0; }
+  .user-email { font-size: 13px; color: var(--muted); }
 
   .bell-wrap { position: relative; display: inline-flex; align-items: center; }
-  .bell-wrap i { color: #fff; font-size: 1.2rem; }
+  .bell-wrap i { color: var(--ink); font-size: 1.2rem; }
   .bell-badge {
     position: absolute;
     top: -6px;
@@ -215,20 +152,13 @@
   }
   .bell-badge.show { display: flex; }
 
-  .menu-toggle {
-    display: none;
-    background: none;
-    border: none;
-    font-size: 1.5rem;
-    cursor: pointer;
-    color: #fff;
-    padding: 4px 8px;
-    border-radius: 8px;
+  /* ---------- Main ---------- */
+  .main {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
   }
-
-  .menu-toggle:hover { background: rgba(255,255,255,0.08); }
-
-  .page-title { font-size: 20px; font-weight: bold; color: #fff; }
 
   .content { padding: 40px 24px 60px; flex: 1; background: #ffffff; color: var(--ink); }
 
@@ -371,9 +301,9 @@
     border: 1px solid var(--line);
     box-shadow: 0 10px 30px rgba(10, 60, 120, 0.14);
     /* Leaflet's internal panes/controls use z-index values up to ~1000 —
-       without this, they escape past the sidebar (z-index 200) when it's
-       open on mobile. Boxing the map in its own stacking context caps
-       everything inside it at z-index 1, well below the sidebar/overlay. */
+       without this, they'd escape past the sticky topnav (z-index 200).
+       Boxing the map in its own stacking context caps everything inside
+       it at z-index 1, well below the topnav. */
     position: relative;
     z-index: 1;
   }
@@ -603,8 +533,7 @@
   /* While logged out, the dashboard behind the overlay must not occupy layout
      space — otherwise the page becomes scrollable into empty area even though
      everything visible is just the login card. */
-  body.logged-out .sidebar,
-  body.logged-out .overlay,
+  body.logged-out .topnav,
   body.logged-out .main { display: none; }
 
   /* Elements only for admin — toggled via JS adding/removing this class on <body>. */
@@ -637,18 +566,9 @@
   }
 
   @media (max-width: 768px) {
-    .sidebar {
-      position: fixed;
-      left: 0;
-      top: 0;
-      transform: translateX(-100%);
-      box-shadow: 6px 0 24px rgba(0,0,0,0.3);
-    }
-
-    body.sidebar-open .sidebar { transform: translateX(0); }
-    body.sidebar-open .overlay { display: block; }
-
-    .menu-toggle { display: inline-flex; }
+    .topnav { padding: 8px 14px; gap: 10px; }
+    .topnav-brand .title { display: none; }
+    .user-email { display: none; }
 
     .stat-row { grid-template-columns: 1fr; }
     .info-card { flex-direction: column; align-items: center; text-align: center; }
@@ -659,7 +579,7 @@
   }
 
   @media print {
-    .sidebar, .topbar, .btn-row, .row-actions, .overlay { display: none !important; }
+    .topnav, .btn-row, .row-actions { display: none !important; }
     .content { padding: 0; }
   }
 </style>
@@ -687,41 +607,31 @@
     </div>
   </div>
 
-  <aside class="sidebar" id="sidebar">
-    <div class="sidebar-header">
+  <header class="topnav" id="topnav">
+    <div class="topnav-brand">
       <div class="logo-mini"><img src="มนัส.jpg" alt="โลโก้มนัสฟาร์ม"></div>
       <div class="title">มนัสฟาร์ม</div>
     </div>
-    <ul class="nav">
-      <li><a href="#" class="active" data-page="overview"><span class="icon"><i class="bi bi-house-door-fill"></i></span> ภาพรวม</a></li>
-      <li><a href="#" data-page="dailylog"><span class="icon"><i class="bi bi-journal-text"></i></span> บันทึกรายวัน</a></li>
-      <li><a href="#" data-page="ponds"><span class="icon"><i class="bi bi-water"></i></span> บ่อเลี้ยง</a></li>
-      <li><a href="#" data-page="production"><span class="icon"><i class="bi bi-graph-up-arrow"></i></span> ผลผลิต</a></li>
-      <li><a href="#" data-page="cost"><span class="icon"><i class="bi bi-cash-coin"></i></span> คำนวณต้นทุน</a></li>
-      <li><a href="#" data-page="report"><span class="icon"><i class="bi bi-bar-chart-line-fill"></i></span> รายงาน</a></li>
-      <li><a href="#" data-page="settings"><span class="icon"><i class="bi bi-gear-fill"></i></span> ตั้งค่า</a></li>
-    </ul>
-    <div class="sidebar-footer">© 2026 มนัสฟาร์ม</div>
-  </aside>
-
-  <div class="overlay" id="overlay"></div>
+    <nav class="topnav-links">
+      <a href="#" class="active" data-page="overview"><span class="icon"><i class="bi bi-house-door-fill"></i></span> ภาพรวม</a>
+      <a href="#" data-page="dailylog"><span class="icon"><i class="bi bi-journal-text"></i></span> บันทึกรายวัน</a>
+      <a href="#" data-page="ponds"><span class="icon"><i class="bi bi-water"></i></span> บ่อเลี้ยง</a>
+      <a href="#" data-page="production"><span class="icon"><i class="bi bi-graph-up-arrow"></i></span> ผลผลิต</a>
+      <a href="#" data-page="cost"><span class="icon"><i class="bi bi-cash-coin"></i></span> คำนวณต้นทุน</a>
+      <a href="#" data-page="report"><span class="icon"><i class="bi bi-bar-chart-line-fill"></i></span> รายงาน</a>
+      <a href="#" data-page="settings"><span class="icon"><i class="bi bi-gear-fill"></i></span> ตั้งค่า</a>
+    </nav>
+    <div class="topnav-right">
+      <div class="bell-wrap">
+        <i class="bi bi-bell-fill"></i>
+        <span class="bell-badge" id="bellBadge">0</span>
+      </div>
+      <span class="user-email" id="userEmailLabel"></span>
+      <button class="btn btn-outline btn-sm" id="logoutBtn">ออกจากระบบ</button>
+    </div>
+  </header>
 
   <div class="main">
-    <header class="topbar">
-      <div class="topbar-left">
-        <button class="menu-toggle" id="menuToggle" aria-label="เปิดเมนู">☰</button>
-        <span class="page-title" id="pageTitle">ภาพรวม</span>
-      </div>
-      <div class="topbar-right">
-        <div class="bell-wrap">
-          <i class="bi bi-bell-fill"></i>
-          <span class="bell-badge" id="bellBadge">0</span>
-        </div>
-        <span class="user-email" id="userEmailLabel"></span>
-        <button class="btn btn-outline btn-sm" id="logoutBtn">ออกจากระบบ</button>
-      </div>
-    </header>
-
     <main class="content">
       <div class="page-wrap">
 
@@ -2009,31 +1919,20 @@
     document.body.classList.toggle('role-admin', CURRENT_USER_ROLE === 'admin');
   }
 
-  /* ---------------- Nav / sidebar ---------------- */
-  const sidebar = document.getElementById('sidebar');
-  const overlay = document.getElementById('overlay');
-  const menuToggle = document.getElementById('menuToggle');
-
-  function openSidebar() { document.body.classList.add('sidebar-open'); }
-  function closeSidebar() { document.body.classList.remove('sidebar-open'); }
-
-  menuToggle.addEventListener('click', () => {
-    document.body.classList.contains('sidebar-open') ? closeSidebar() : openSidebar();
-  });
-  overlay.addEventListener('click', closeSidebar);
-
-  document.querySelectorAll('.nav a').forEach(link => {
+  /* ---------------- Nav (top bar) ---------------- */
+  document.querySelectorAll('.topnav-links a').forEach(link => {
     link.addEventListener('click', (e) => {
       e.preventDefault();
-      document.querySelectorAll('.nav a').forEach(a => a.classList.remove('active'));
+      document.querySelectorAll('.topnav-links a').forEach(a => a.classList.remove('active'));
       link.classList.add('active');
 
       const pageKey = link.dataset.page;
       document.querySelectorAll('.page').forEach(sec => sec.classList.remove('active'));
       document.getElementById('page-' + pageKey).classList.add('active');
 
-      document.getElementById('pageTitle').textContent = link.textContent.trim();
-      if (window.innerWidth <= 768) closeSidebar();
+      // Keep the active pill scrolled into view on narrow screens where the
+      // nav row scrolls horizontally.
+      link.scrollIntoView({ inline: 'center', block: 'nearest', behavior: 'smooth' });
     });
   });
 
