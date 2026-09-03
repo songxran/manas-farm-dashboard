@@ -589,10 +589,43 @@
     .summary-row { grid-template-columns: repeat(2, 1fr); }
   }
 
+  .mobile-menu-toggle {
+    display: none;
+    background: none;
+    border: none;
+    font-size: 1.4rem;
+    color: var(--ink);
+    cursor: pointer;
+    padding: 6px 8px;
+    border-radius: 8px;
+    flex-shrink: 0;
+  }
+  .mobile-menu-toggle:hover { background: #f0f5ff; }
+
   @media (max-width: 768px) {
-    .topnav { padding: 8px 14px; gap: 10px; }
+    .topnav { padding: 8px 14px; gap: 10px; position: relative; }
     .topnav-brand .title { display: none; }
     .user-email { display: none; }
+
+    .mobile-menu-toggle { display: inline-flex; }
+
+    .topnav-links {
+      display: none;
+      position: absolute;
+      top: 100%;
+      left: 0;
+      right: 0;
+      flex-direction: column;
+      align-items: stretch;
+      gap: 4px;
+      background: #fff;
+      padding: 10px 14px 14px;
+      border-bottom: 1px solid var(--line);
+      box-shadow: 0 12px 24px rgba(10,60,120,0.14);
+      overflow-x: visible;
+    }
+    .topnav-links.mobile-open { display: flex; }
+    .topnav-links a { justify-content: flex-start; }
 
     .stat-row { grid-template-columns: 1fr; }
     .info-card { flex-direction: column; align-items: center; text-align: center; }
@@ -633,6 +666,7 @@
   </div>
 
   <header class="topnav" id="topnav">
+    <button class="mobile-menu-toggle" id="mobileMenuToggle" aria-label="เปิดเมนู"><i class="bi bi-list"></i></button>
     <div class="topnav-brand">
       <div class="logo-mini"><img src="มนัส.jpg" alt="โลโก้มนัสฟาร์ม"></div>
       <div class="title">มนัสฟาร์ม</div>
@@ -1965,6 +1999,13 @@
   }
 
   /* ---------------- Nav (top bar) ---------------- */
+  const topnavLinks = document.querySelector('.topnav-links');
+  const mobileMenuToggle = document.getElementById('mobileMenuToggle');
+
+  mobileMenuToggle.addEventListener('click', () => {
+    topnavLinks.classList.toggle('mobile-open');
+  });
+
   document.querySelectorAll('.topnav-links a').forEach(link => {
     link.addEventListener('click', (e) => {
       e.preventDefault();
@@ -1975,8 +2016,11 @@
       document.querySelectorAll('.page').forEach(sec => sec.classList.remove('active'));
       document.getElementById('page-' + pageKey).classList.add('active');
 
-      // Keep the active pill scrolled into view on narrow screens where the
-      // nav row scrolls horizontally.
+      // On mobile the links live in a dropdown — close it after picking one.
+      topnavLinks.classList.remove('mobile-open');
+
+      // Keep the active pill scrolled into view on wider screens where the
+      // nav row scrolls horizontally instead of dropping down.
       link.scrollIntoView({ inline: 'center', block: 'nearest', behavior: 'smooth' });
     });
   });
