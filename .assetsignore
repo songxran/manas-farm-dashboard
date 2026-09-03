@@ -1,0 +1,6 @@
+.git
+.gitignore
+wrangler.toml
+CLAUDE.md
+SUPABASE.md
+README.md
