@@ -1087,6 +1087,18 @@
           <input type="number" id="pfDepth" step="0.1" min="0">
         </div>
       </div>
+      <div class="field-grid" id="pfCycleSection">
+        <div class="field">
+          <label>เริ่มรุ่นที่ (ถ้ามี)</label>
+          <input type="number" id="pfCycleNo" min="1" placeholder="เช่น 1">
+        </div>
+        <div class="field">
+          <label>วันที่ปล่อยลูกพันธุ์</label>
+          <input type="date" id="pfCycleRelease">
+        </div>
+      </div>
+      <div class="field-hint" id="pfCycleHint">ใส่เลขรุ่นถ้าบ่อนี้เริ่มเลี้ยงแล้ว (เช่น เคยเลี้ยงมาก่อนใช้ระบบนี้ ให้ใส่เป็นรุ่นที่ 3 ได้) — เว้นว่างได้ถ้ายังไม่เริ่มเลี้ยง</div>
+
       <div class="field">
         <label>พนักงานที่รับผิดชอบ</label>
         <select id="pfAssignedUser">
@@ -1555,6 +1567,14 @@
     document.getElementById('pfSalinity').value = p && p.salinity !== null ? p.salinity : '';
     populateAssignedUserSelect(p ? p.assignedUserId : null);
 
+    // "เริ่มรุ่นที่" only makes sense when creating a brand-new pond — an
+    // existing pond's cycles are managed on the ผลผลิต page instead, so hide
+    // this section entirely while editing.
+    document.getElementById('pfCycleSection').style.display = isEdit ? 'none' : '';
+    document.getElementById('pfCycleHint').style.display = isEdit ? 'none' : '';
+    document.getElementById('pfCycleNo').value = '';
+    document.getElementById('pfCycleRelease').value = '';
+
     pondFormModal.classList.add('active');
   }
 
@@ -1583,15 +1603,41 @@
 
     const saveBtn = document.getElementById('pondFormSaveBtn');
     saveBtn.disabled = true;
-    const { error } = idVal
-      ? await supabaseClient.from('ponds').update(dbData).eq('id', parseInt(idVal, 10))
-      : await supabaseClient.from('ponds').insert(dbData);
+
+    let error, newPond;
+    if (idVal) {
+      ({ error } = await supabaseClient.from('ponds').update(dbData).eq('id', parseInt(idVal, 10)));
+    } else {
+      // .select().single() so we get the new pond's id back — needed below
+      // to create its optional first cycle in the same save action.
+      ({ data: newPond, error } = await supabaseClient.from('ponds').insert(dbData).select().single());
+    }
+
+    // Only offered for brand-new ponds (see openPondForm) — lets the admin
+    // record which cycle number this pond is actually starting at, e.g.
+    // when entering a pond that was already on its 3rd real-life cycle
+    // before this system existed, instead of always starting fresh at 1.
+    const cycleNoVal = document.getElementById('pfCycleNo').value.trim();
+    if (!error && newPond && cycleNoVal !== '') {
+      const cycleNo = parseInt(cycleNoVal, 10);
+      if (cycleNo >= 1) {
+        const { error: cycleError } = await supabaseClient.from('production_cycles').insert({
+          pond_id: newPond.id,
+          cycle_no: cycleNo,
+          release_date: document.getElementById('pfCycleRelease').value || null,
+          species: dbData.species,
+          status: 'growing',
+        });
+        if (cycleError) alert('บันทึกบ่อสำเร็จ แต่เริ่มรุ่นที่ ' + cycleNo + ' ไม่สำเร็จ: ' + cycleError.message);
+      }
+    }
+
     saveBtn.disabled = false;
 
     if (error) { alert('บันทึกไม่สำเร็จ: ' + error.message); return; }
 
     pondFormModal.classList.remove('active');
-    await loadPonds();
+    await Promise.all([loadPonds(), loadCycles()]);
     renderAll();
   });
 
