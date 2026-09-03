@@ -530,6 +530,28 @@
   }
   .auth-overlay.active { display: flex; }
 
+  /* Decorative bubbles + shrimp drifting up behind the login card, generated
+     via JS (randomized position/size/speed) — purely visual, no interaction. */
+  .float-bg {
+    position: absolute;
+    inset: 0;
+    overflow: hidden;
+    pointer-events: none;
+    z-index: 0;
+  }
+  .float-item {
+    position: absolute;
+    bottom: -10%;
+    animation-name: floatUp;
+    animation-timing-function: linear;
+    animation-iteration-count: infinite;
+    will-change: transform;
+  }
+  @keyframes floatUp {
+    from { transform: translateY(0) rotate(0deg); }
+    to   { transform: translateY(-125vh) rotate(12deg); }
+  }
+
   /* While logged out, the dashboard behind the overlay must not occupy layout
      space — otherwise the page becomes scrollable into empty area even though
      everything visible is just the login card. */
@@ -540,6 +562,8 @@
   body:not(.role-admin) .admin-only { display: none !important; }
 
   .auth-card {
+    position: relative;
+    z-index: 1;
     background: #fff;
     border-radius: 20px;
     padding: 34px 30px;
@@ -588,6 +612,7 @@
 
   <!-- Login gate -->
   <div class="auth-overlay active" id="authOverlay">
+    <div class="float-bg" id="floatBg"></div>
     <div class="auth-card">
       <div class="logo-mini"><img src="มนัส.jpg" alt="โลโก้มนัสฟาร์ม"></div>
       <h2>มนัสฟาร์ม</h2>
@@ -1157,6 +1182,26 @@
     'https://jwmtvhebqblchbdahzhe.supabase.co',
     'sb_publishable_rgN7JnGE64k8V80E3ky-3g_XopWo8dK'
   );
+
+  /* ---------------- Login screen floating bubbles + shrimp ---------------- */
+  // Purely decorative, no auth needed — generated once so each has a
+  // different lane/size/speed, same idea as the reference site's floaters.
+  (function initFloatBg() {
+    const container = document.getElementById('floatBg');
+    if (!container) return;
+    const EMOJIS = ['🫧', '🦐', '🫧', '🫧', '🦐', '🫧'];
+    const items = [];
+    for (let i = 0; i < 16; i++) {
+      const emoji = EMOJIS[i % EMOJIS.length];
+      const left = Math.random() * 100;
+      const size = 1 + Math.random() * 1.6;
+      const opacity = 0.25 + Math.random() * 0.4;
+      const duration = 10 + Math.random() * 10;
+      const delay = -Math.random() * 20;
+      items.push(`<span class="float-item" style="left:${left}vw;font-size:${size}rem;opacity:${opacity};animation-duration:${duration}s;animation-delay:${delay}s;">${emoji}</span>`);
+    }
+    container.innerHTML = items.join('');
+  })();
 
   /* ---------------- Data ---------------- */
   const CATS = { seed: 'ค่าลูกพันธุ์', feed: 'ค่าอาหาร', utility: 'ค่าไฟ/น้ำมัน', chem: 'ค่ายา/เคมีภัณฑ์', labor: 'ค่าแรงงาน' };
