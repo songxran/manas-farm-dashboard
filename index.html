@@ -1263,10 +1263,17 @@
           <input type="date" id="pdHarvest">
         </div>
       </div>
-      <div class="field">
-        <label>ไซซ์ / เกรด</label>
-        <input type="text" id="pdGrade" placeholder="เช่น 40 ตัว/กก.">
+      <div class="field-grid">
+        <div class="field">
+          <label>ไซซ์ / เกรด</label>
+          <input type="text" id="pdGrade" placeholder="เช่น 40 ตัว/กก.">
+        </div>
+        <div class="field">
+          <label>ยอดขายจริง (บาท)</label>
+          <input type="number" id="pdRevenue" min="0" placeholder="เงินที่ได้จริงหลังขาย">
+        </div>
       </div>
+      <p class="field-hint">ใส่ยอดขายจริงหลังเก็บเกี่ยว รายงานจะใช้ตัวเลขนี้คำนวณกำไร/ขาดทุน ถ้าเว้นว่างจะประมาณจาก ผลผลิต × ราคาขายกลางในหน้า "ตั้งค่า"</p>
       <div class="btn-row">
         <button class="btn btn-primary" id="productionSaveBtn">บันทึก</button>
         <button class="btn btn-outline" id="productionCancelBtn">ยกเลิก</button>
@@ -1388,6 +1395,9 @@
       id: row.id, pondId: row.pond_id, cycleNo: row.cycle_no, release: row.release_date,
       species: row.species, status: row.status, harvest: row.harvest_date,
       yieldKg: row.yield_kg, survival: row.survival, fcr: row.fcr, grade: row.grade,
+      // actual baht received for this cycle's harvest — when set, the report
+      // uses it directly instead of estimating yieldKg × the farm sell price.
+      revenue: row.revenue != null ? Number(row.revenue) : null,
     };
   }
   function costItemFromDb(row) {
@@ -1463,13 +1473,17 @@
       });
     }
 
-    const yieldByMonth = {}, costByMonth = {};
-    months.forEach(m => { yieldByMonth[m.key] = 0; costByMonth[m.key] = 0; });
+    const yieldByMonth = {}, costByMonth = {}, revenueByMonth = {};
+    months.forEach(m => { yieldByMonth[m.key] = 0; costByMonth[m.key] = 0; revenueByMonth[m.key] = 0; });
 
     CYCLES.forEach(c => {
       if (!c.harvest) return;
       const k = monthKeyOf(c.harvest);
-      if (k in yieldByMonth) yieldByMonth[k] += c.yieldKg || 0;
+      if (k in yieldByMonth) {
+        yieldByMonth[k] += c.yieldKg || 0;
+        // actual sale amount when recorded, otherwise estimate from yield
+        revenueByMonth[k] += c.revenue != null ? c.revenue : (c.yieldKg || 0) * FARM_SETTINGS.sell_price;
+      }
     });
 
     COST_ITEMS.forEach(item => {
@@ -1481,7 +1495,7 @@
     const rows = months.map(m => {
       const yieldKg = yieldByMonth[m.key];
       const cost = costByMonth[m.key];
-      const revenue = yieldKg * FARM_SETTINGS.sell_price;
+      const revenue = revenueByMonth[m.key];
       return { month: m.label, yield: yieldKg, cost, profit: revenue - cost };
     });
 
@@ -1953,6 +1967,7 @@
     document.getElementById('pdFcr').value = c.fcr ?? '';
     document.getElementById('pdHarvest').value = c.harvest || '';
     document.getElementById('pdGrade').value = c.grade || '';
+    document.getElementById('pdRevenue').value = c.revenue ?? '';
     productionModal.classList.add('active');
   }
   document.getElementById('productionCancelBtn').addEventListener('click', () => productionModal.classList.remove('active'));
@@ -1968,6 +1983,7 @@
       fcr: document.getElementById('pdFcr').value !== '' ? parseFloat(document.getElementById('pdFcr').value) : null,
       harvest_date: harvest,
       grade: document.getElementById('pdGrade').value.trim() || null,
+      revenue: document.getElementById('pdRevenue').value !== '' ? parseFloat(document.getElementById('pdRevenue').value) : null,
       status: harvest ? 'harvested' : 'growing',
     };
 
@@ -2160,12 +2176,15 @@
 
     const rows = CYCLES.map(c => {
       const cost = costTotalForCycle(c.id);
-      const revenue = (c.yieldKg || 0) * FARM_SETTINGS.sell_price;
+      // Prefer the actual sale amount recorded on the cycle; fall back to an
+      // estimate (yield × the farm's default sell price) only when it isn't set.
+      const revenueIsActual = c.revenue != null;
+      const revenue = revenueIsActual ? c.revenue : (c.yieldKg || 0) * FARM_SETTINGS.sell_price;
       const profit = revenue - cost;
       const margin = revenue ? (profit / revenue) * 100 : 0;
       totalRevenue += revenue;
       totalCost += cost;
-      return { c, pond: findPond(c.pondId), cost, revenue, profit, margin };
+      return { c, pond: findPond(c.pondId), cost, revenue, profit, margin, revenueIsActual };
     });
 
     const totalProfit = totalRevenue - totalCost;
@@ -2187,7 +2206,7 @@
           <td><strong>${r.pond ? r.pond.code : '-'}</strong></td>
           <td class="num">${r.c.cycleNo}</td>
           <td><span class="badge ${r.c.status === 'growing' ? 'badge-growing' : 'badge-harvested'}">${r.c.status === 'growing' ? 'กำลังเลี้ยง' : 'เก็บเกี่ยวแล้ว'}</span></td>
-          <td class="num">${fmt(r.revenue)}</td>
+          <td class="num">${fmt(r.revenue)}${r.revenue && !r.revenueIsActual ? ' <span style="color:var(--muted);font-size:11px;">(ประมาณ)</span>' : ''}</td>
           <td class="num">${fmt(r.cost)}</td>
           <td class="num" style="color:${r.profit >= 0 ? '#1b8a3d' : '#d0342c'}"><strong>${fmt(r.profit)}</strong></td>
           <td class="num">${r.revenue ? r.margin.toFixed(1) + '%' : '-'}</td>
@@ -2234,14 +2253,15 @@
   // CSV fine, and this avoids pulling in a spreadsheet-writing library for
   // one button. The leading BOM makes Excel render Thai correctly.
   document.getElementById('exportExcelBtn').addEventListener('click', () => {
-    let csv = '﻿' + 'รหัสบ่อ,รุ่นที่,สถานะ,รายได้ (บาท),ต้นทุนรวม (บาท),กำไร/ขาดทุน (บาท),มาร์จิ้น (%)\n';
+    let csv = '﻿' + 'รหัสบ่อ,รุ่นที่,สถานะ,รายได้ (บาท),ประเภทรายได้,ต้นทุนรวม (บาท),กำไร/ขาดทุน (บาท),มาร์จิ้น (%)\n';
     CYCLES.forEach(c => {
       const pond = findPond(c.pondId);
       const cost = costTotalForCycle(c.id);
-      const revenue = (c.yieldKg || 0) * FARM_SETTINGS.sell_price;
+      const revenueIsActual = c.revenue != null;
+      const revenue = revenueIsActual ? c.revenue : (c.yieldKg || 0) * FARM_SETTINGS.sell_price;
       const profit = revenue - cost;
       const margin = revenue ? ((profit / revenue) * 100).toFixed(1) : '0';
-      csv += `${pond ? pond.code : ''},${c.cycleNo},${STATUS_LABEL[c.status] || c.status},${revenue},${cost},${profit},${margin}\n`;
+      csv += `${pond ? pond.code : ''},${c.cycleNo},${STATUS_LABEL[c.status] || c.status},${revenue},${revenueIsActual ? 'ยอดขายจริง' : 'ประมาณ'},${cost},${profit},${margin}\n`;
     });
     const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);

@@ -42,6 +42,7 @@ create table production_cycles (
   status       text not null default 'growing' check (status in ('growing','harvested')),
   harvest_date date,
   yield_kg     numeric default 0,
+  revenue      numeric,             -- ยอดขายจริง (บาท) ที่ได้จากการเก็บเกี่ยวรุ่นนี้ — ถ้า null หน้ารายงานจะประมาณจาก yield_kg × farm_settings.sell_price
   survival     numeric,
   fcr          numeric,
   grade        text,
