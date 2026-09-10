@@ -2178,16 +2178,22 @@
     // One row per production cycle, grouped by pond. A pond with no cycle yet
     // still gets a placeholder row so every pond the user can see appears in
     // the report (they had been confused when only the one pond with a cycle
-    // showed up) — that row carries no money and isn't summed into the totals.
+    // showed up). That row shows the pond's own accumulated cost (e.g. pond
+    // prep spending logged before a cycle is started) — no revenue, so its
+    // profit is just the negative cost, and it IS summed into the totals.
     const rows = [];
     PONDS.forEach(p => {
       const pondCycles = cyclesForPond(p.id);
       if (pondCycles.length === 0) {
-        rows.push({ pond: p, c: null, noCycle: true, cost: 0, revenue: 0, profit: 0, margin: 0, revenueIsActual: false });
+        const cost = costTotal(p.id);
+        totalCost += cost;
+        rows.push({ pond: p, c: null, noCycle: true, cost, revenue: 0, profit: -cost, margin: 0, revenueIsActual: false });
         return;
       }
+      let attributed = 0;
       pondCycles.forEach(c => {
         const cost = costTotalForCycle(c.id);
+        attributed += cost;
         // Prefer the actual sale amount recorded on the cycle; fall back to an
         // estimate (yield × the farm's default sell price) only when it isn't set.
         const revenueIsActual = c.revenue != null;
@@ -2198,6 +2204,14 @@
         totalCost += cost;
         rows.push({ c, pond: p, cost, revenue, profit, margin, revenueIsActual });
       });
+      // Costs logged against the pond but not tied to any cycle (e.g. added
+      // before the first cycle was started) — show them so the report's total
+      // cost still matches the cost page's per-pond total.
+      const unattributed = costTotal(p.id) - attributed;
+      if (unattributed > 0) {
+        totalCost += unattributed;
+        rows.push({ pond: p, c: null, unattributed: true, cost: unattributed, revenue: 0, profit: -unattributed, margin: 0, revenueIsActual: false });
+      }
     });
 
     const totalProfit = totalRevenue - totalCost;
@@ -2214,14 +2228,14 @@
     if (rows.length === 0) {
       tbody.innerHTML = `<tr class="empty-row"><td colspan="7">ยังไม่มีข้อมูล</td></tr>`;
     } else {
-      tbody.innerHTML = rows.map(r => r.noCycle ? `
+      tbody.innerHTML = rows.map(r => (r.noCycle || r.unattributed) ? `
         <tr style="color:var(--muted);">
           <td><strong>${r.pond.code}</strong></td>
           <td class="num">-</td>
-          <td><span class="badge badge-empty">ยังไม่เริ่มรุ่น</span></td>
+          <td><span class="badge badge-empty">${r.unattributed ? 'ต้นทุนไม่ระบุรุ่น' : 'ยังไม่เริ่มรุ่น'}</span></td>
           <td class="num">-</td>
-          <td class="num">-</td>
-          <td class="num">-</td>
+          <td class="num">${r.cost ? fmt(r.cost) : '-'}</td>
+          <td class="num" ${r.cost ? 'style="color:#d0342c"' : ''}><strong>${r.cost ? fmt(-r.cost) : '-'}</strong></td>
           <td class="num">-</td>
         </tr>` : `
         <tr>
