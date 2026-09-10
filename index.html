@@ -2175,17 +2175,29 @@
   function renderReport() {
     let totalRevenue = 0, totalCost = 0;
 
-    const rows = CYCLES.map(c => {
-      const cost = costTotalForCycle(c.id);
-      // Prefer the actual sale amount recorded on the cycle; fall back to an
-      // estimate (yield × the farm's default sell price) only when it isn't set.
-      const revenueIsActual = c.revenue != null;
-      const revenue = revenueIsActual ? c.revenue : (c.yieldKg || 0) * FARM_SETTINGS.sell_price;
-      const profit = revenue - cost;
-      const margin = revenue ? (profit / revenue) * 100 : 0;
-      totalRevenue += revenue;
-      totalCost += cost;
-      return { c, pond: findPond(c.pondId), cost, revenue, profit, margin, revenueIsActual };
+    // One row per production cycle, grouped by pond. A pond with no cycle yet
+    // still gets a placeholder row so every pond the user can see appears in
+    // the report (they had been confused when only the one pond with a cycle
+    // showed up) — that row carries no money and isn't summed into the totals.
+    const rows = [];
+    PONDS.forEach(p => {
+      const pondCycles = cyclesForPond(p.id);
+      if (pondCycles.length === 0) {
+        rows.push({ pond: p, c: null, noCycle: true, cost: 0, revenue: 0, profit: 0, margin: 0, revenueIsActual: false });
+        return;
+      }
+      pondCycles.forEach(c => {
+        const cost = costTotalForCycle(c.id);
+        // Prefer the actual sale amount recorded on the cycle; fall back to an
+        // estimate (yield × the farm's default sell price) only when it isn't set.
+        const revenueIsActual = c.revenue != null;
+        const revenue = revenueIsActual ? c.revenue : (c.yieldKg || 0) * FARM_SETTINGS.sell_price;
+        const profit = revenue - cost;
+        const margin = revenue ? (profit / revenue) * 100 : 0;
+        totalRevenue += revenue;
+        totalCost += cost;
+        rows.push({ c, pond: p, cost, revenue, profit, margin, revenueIsActual });
+      });
     });
 
     const totalProfit = totalRevenue - totalCost;
@@ -2202,7 +2214,16 @@
     if (rows.length === 0) {
       tbody.innerHTML = `<tr class="empty-row"><td colspan="7">ยังไม่มีข้อมูล</td></tr>`;
     } else {
-      tbody.innerHTML = rows.map(r => `
+      tbody.innerHTML = rows.map(r => r.noCycle ? `
+        <tr style="color:var(--muted);">
+          <td><strong>${r.pond.code}</strong></td>
+          <td class="num">-</td>
+          <td><span class="badge badge-empty">ยังไม่เริ่มรุ่น</span></td>
+          <td class="num">-</td>
+          <td class="num">-</td>
+          <td class="num">-</td>
+          <td class="num">-</td>
+        </tr>` : `
         <tr>
           <td><strong>${r.pond ? r.pond.code : '-'}</strong></td>
           <td class="num">${r.c.cycleNo}</td>
