@@ -53,6 +53,7 @@
     --muted: #7c93b8;
     --line: #eef2f8;
     --danger: #d0342c;
+    --chart-bar: #0a5bb0;   /* single flat colour for every chart bar / progress fill */
   }
 
   * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -493,7 +494,7 @@
     width: 60%;
     min-width: 22px;
     border-radius: 6px 6px 0 0;
-    background: linear-gradient(180deg, var(--blue-4), var(--blue-2));
+    background: var(--chart-bar);
     transition: height 0.4s ease;
   }
 
@@ -512,7 +513,7 @@
   .cost-cat-top .amount { color: var(--muted); }
 
   .cost-track { height: 10px; border-radius: 6px; background: #eef2f8; overflow: hidden; }
-  .cost-fill { height: 100%; border-radius: 6px; background: linear-gradient(90deg, var(--blue-4), var(--gold)); }
+  .cost-fill { height: 100%; border-radius: 6px; background: var(--chart-bar); }
 
   /* ---------- Summary cards row ---------- */
   .summary-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 22px; }
@@ -999,6 +1000,7 @@
 
           <div class="panel">
             <h3>แนวโน้มต้นทุน vs กำไรรายเดือน (บาท)</h3>
+            <div class="field-hint" style="margin-top:0;">แต่ละเดือน — แท่งซ้าย = ต้นทุน · แท่งขวา = กำไร</div>
             <div class="bar-chart" id="trendProfitChart"></div>
           </div>
         </section>
@@ -1249,19 +1251,19 @@
           <input type="number" id="pdYield" min="0">
         </div>
         <div class="field">
+          <label>อัตราการรอด (%)</label>
+          <input type="number" id="pdSurvival" min="0" max="100">
+        </div>
+      </div>
+      <div class="field-grid">
+        <div class="field">
+          <label>FCR</label>
+          <input type="number" id="pdFcr" step="0.01" min="0">
+        </div>
+        <div class="field">
           <label>วันที่เก็บเกี่ยว</label>
           <input type="date" id="pdHarvest">
         </div>
-      </div>
-      <div class="field">
-        <label>อัตราการรอด (%)</label>
-        <input type="number" id="pdSurvival" min="0" max="100">
-        <div class="field-hint">จำนวนกุ้งที่จับได้ ÷ จำนวนลูกกุ้งที่ปล่อยลงบ่อ × 100<br>ตัวอย่าง: ปล่อย 100,000 ตัว จับได้ 80,000 ตัว → 80,000 ÷ 100,000 × 100 = <b>80%</b> (ยิ่งสูงยิ่งดี)</div>
-      </div>
-      <div class="field">
-        <label>FCR (อัตราแลกเนื้อ)</label>
-        <input type="number" id="pdFcr" step="0.01" min="0">
-        <div class="field-hint">น้ำหนักอาหารที่ให้ทั้งรุ่น (กก.) ÷ น้ำหนักกุ้งที่จับได้ (กก.)<br>ตัวอย่าง: ให้อาหาร 1,500 กก. จับกุ้งได้ 1,000 กก. → 1,500 ÷ 1,000 = <b>1.5</b> (ยิ่งต่ำยิ่งดี = เปลืองอาหารน้อย)</div>
       </div>
       <div class="field-grid">
         <div class="field">
@@ -1273,7 +1275,6 @@
           <input type="number" id="pdRevenue" min="0" placeholder="เงินที่ได้จริงหลังขาย">
         </div>
       </div>
-      <div class="field-hint">ใส่ยอดขายจริงหลังเก็บเกี่ยว รายงานจะใช้ตัวเลขนี้คำนวณกำไร/ขาดทุน ถ้าเว้นว่างจะประมาณจาก ผลผลิต × ราคาขายกลางในหน้า "ตั้งค่า"</div>
       <div class="btn-row">
         <button class="btn btn-primary" id="productionSaveBtn">บันทึก</button>
         <button class="btn btn-outline" id="productionCancelBtn">ยกเลิก</button>
@@ -2023,7 +2024,7 @@
         return `
         <div class="bar-col">
           <div class="bar-val">${fmt(t)}</div>
-          <div class="bar" style="height:${Math.max((t / maxCost) * 100, 3)}%; background:linear-gradient(180deg, var(--gold), var(--blue-3));"></div>
+          <div class="bar" style="height:${Math.max((t / maxCost) * 100, 3)}%;"></div>
           <div class="bar-label">${p.code.replace('บ่อ ', '#')}</div>
         </div>`;
       }).join('');
@@ -2233,11 +2234,11 @@
         <div class="bar-col" style="flex-direction:row; align-items:flex-end; gap:4px;">
           <div style="display:flex;flex-direction:column;align-items:center;flex:1;">
             <div class="bar-val">${fmt(t.cost)}</div>
-            <div class="bar" style="width:80%;height:${(t.cost / maxMoney) * 100}%; background:linear-gradient(180deg,#ef9a9a,#c62828);"></div>
+            <div class="bar" style="width:80%;height:${(t.cost / maxMoney) * 100}%;"></div>
           </div>
           <div style="display:flex;flex-direction:column;align-items:center;flex:1;">
             <div class="bar-val">${fmt(t.profit)}</div>
-            <div class="bar" style="width:80%;height:${(t.profit / maxMoney) * 100}%; background:linear-gradient(180deg, var(--blue-4), #1b8a3d);"></div>
+            <div class="bar" style="width:80%;height:${(t.profit / maxMoney) * 100}%;"></div>
           </div>
           <div class="bar-label" style="width:100%;">${t.month}</div>
         </div>`).join('');

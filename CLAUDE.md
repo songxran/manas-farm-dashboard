@@ -57,7 +57,7 @@ Real persistence lives in Postgres (see `SUPABASE.md` for the full schema + RLS)
 
 Each page has a `render*()` function (`renderPonds`, `renderProduction`, `renderCost`, `renderReport`, `renderAlerts`, `renderUsers`) that rebuilds its `<tbody>`/chart/panel `innerHTML` from current cache state. There is no diffing. `renderAll()` calls all of them and should be called after any data refresh. The save/delete flow for every CRUD action is: **await the Supabase call → on success, re-`load*()` the affected table(s) → `renderAll()`** — never mutate the cache arrays directly.
 
-Charts (`.bar-chart`) are hand-rolled with `<div>` bars sized by inline `height`/`width` percentages against the max value in the series — no charting library.
+Charts (`.bar-chart`) are hand-rolled with `<div>` bars sized by inline `height`/`width` percentages against the max value in the series — no charting library. Every bar and progress fill (`.bar`, `.cost-fill`) is one flat colour, `--chart-bar` (per user request — no gradients, no per-series colours); the cost-vs-profit trend chart tells its two bars apart with a caption ("แท่งซ้าย = ต้นทุน · แท่งขวา = กำไร"), not colour. Don't reintroduce multi-colour bars.
 
 ### CRUD modals
 
