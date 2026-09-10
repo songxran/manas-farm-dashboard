@@ -1247,6 +1247,16 @@
       <input type="hidden" id="pdFormId">
       <div class="field-grid">
         <div class="field">
+          <label>รุ่นที่</label>
+          <input type="number" id="pdCycleNo" min="1">
+        </div>
+        <div class="field">
+          <label>วันปล่อยกุ้ง</label>
+          <input type="date" id="pdRelease">
+        </div>
+      </div>
+      <div class="field-grid">
+        <div class="field">
           <label>ผลผลิต (กก.)</label>
           <input type="number" id="pdYield" min="0">
         </div>
@@ -1963,6 +1973,8 @@
     const pond = findPond(c.pondId);
     document.getElementById('productionFormTitle').textContent = `แก้ไขผลผลิต — ${pond ? pond.code : ''} รุ่นที่ ${c.cycleNo}`;
     document.getElementById('pdFormId').value = cycleId;
+    document.getElementById('pdCycleNo').value = c.cycleNo ?? '';
+    document.getElementById('pdRelease').value = c.release || '';
     document.getElementById('pdYield').value = c.yieldKg || '';
     document.getElementById('pdSurvival').value = c.survival ?? '';
     document.getElementById('pdFcr').value = c.fcr ?? '';
@@ -1978,7 +1990,11 @@
   document.getElementById('productionSaveBtn').addEventListener('click', async () => {
     const cycleId = parseInt(document.getElementById('pdFormId').value, 10);
     const harvest = document.getElementById('pdHarvest').value || null;
+    const cycleNoVal = document.getElementById('pdCycleNo').value.trim();
+    if (cycleNoVal === '' || parseInt(cycleNoVal, 10) < 1) { alert('กรุณาระบุ "รุ่นที่" เป็นตัวเลขตั้งแต่ 1 ขึ้นไป'); return; }
     const dbData = {
+      cycle_no: parseInt(cycleNoVal, 10),
+      release_date: document.getElementById('pdRelease').value || null,
       yield_kg: parseFloat(document.getElementById('pdYield').value) || 0,
       survival: document.getElementById('pdSurvival').value !== '' ? parseFloat(document.getElementById('pdSurvival').value) : null,
       fcr: document.getElementById('pdFcr').value !== '' ? parseFloat(document.getElementById('pdFcr').value) : null,
@@ -1989,7 +2005,14 @@
     };
 
     const { error } = await supabaseClient.from('production_cycles').update(dbData).eq('id', cycleId);
-    if (error) { alert('บันทึกไม่สำเร็จ: ' + error.message); return; }
+    if (error) {
+      // unique(pond_id, cycle_no) — another cycle of this pond already uses that number
+      const msg = error.code === '23505'
+        ? `บ่อนี้มีรุ่นที่ ${dbData.cycle_no} อยู่แล้ว กรุณาใช้เลขรุ่นอื่น`
+        : 'บันทึกไม่สำเร็จ: ' + error.message;
+      alert(msg);
+      return;
+    }
 
     // reflect harvested status on the pond too
     const c = findCycle(cycleId);
