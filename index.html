@@ -1249,19 +1249,19 @@
           <input type="number" id="pdYield" min="0">
         </div>
         <div class="field">
-          <label>อัตราการรอด (%)</label>
-          <input type="number" id="pdSurvival" min="0" max="100">
-        </div>
-      </div>
-      <div class="field-grid">
-        <div class="field">
-          <label>FCR</label>
-          <input type="number" id="pdFcr" step="0.01" min="0">
-        </div>
-        <div class="field">
           <label>วันที่เก็บเกี่ยว</label>
           <input type="date" id="pdHarvest">
         </div>
+      </div>
+      <div class="field">
+        <label>อัตราการรอด (%)</label>
+        <input type="number" id="pdSurvival" min="0" max="100">
+        <div class="field-hint">จำนวนกุ้งที่จับได้ ÷ จำนวนลูกกุ้งที่ปล่อยลงบ่อ × 100<br>ตัวอย่าง: ปล่อย 100,000 ตัว จับได้ 80,000 ตัว → 80,000 ÷ 100,000 × 100 = <b>80%</b> (ยิ่งสูงยิ่งดี)</div>
+      </div>
+      <div class="field">
+        <label>FCR (อัตราแลกเนื้อ)</label>
+        <input type="number" id="pdFcr" step="0.01" min="0">
+        <div class="field-hint">น้ำหนักอาหารที่ให้ทั้งรุ่น (กก.) ÷ น้ำหนักกุ้งที่จับได้ (กก.)<br>ตัวอย่าง: ให้อาหาร 1,500 กก. จับกุ้งได้ 1,000 กก. → 1,500 ÷ 1,000 = <b>1.5</b> (ยิ่งต่ำยิ่งดี = เปลืองอาหารน้อย)</div>
       </div>
       <div class="field-grid">
         <div class="field">
@@ -1273,7 +1273,7 @@
           <input type="number" id="pdRevenue" min="0" placeholder="เงินที่ได้จริงหลังขาย">
         </div>
       </div>
-      <p class="field-hint">ใส่ยอดขายจริงหลังเก็บเกี่ยว รายงานจะใช้ตัวเลขนี้คำนวณกำไร/ขาดทุน ถ้าเว้นว่างจะประมาณจาก ผลผลิต × ราคาขายกลางในหน้า "ตั้งค่า"</p>
+      <div class="field-hint">ใส่ยอดขายจริงหลังเก็บเกี่ยว รายงานจะใช้ตัวเลขนี้คำนวณกำไร/ขาดทุน ถ้าเว้นว่างจะประมาณจาก ผลผลิต × ราคาขายกลางในหน้า "ตั้งค่า"</div>
       <div class="btn-row">
         <button class="btn btn-primary" id="productionSaveBtn">บันทึก</button>
         <button class="btn btn-outline" id="productionCancelBtn">ยกเลิก</button>
